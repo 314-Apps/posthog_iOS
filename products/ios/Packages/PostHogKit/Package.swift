@@ -1,0 +1,80 @@
+// swift-tools-version: 6.0
+import PackageDescription
+
+let package = Package(
+  name: "PostHogKit",
+  defaultLocalization: "en",
+  platforms: [.iOS(.v17)],
+  products: [
+    .library(name: "AppShell", targets: ["AppShell"])
+  ],
+  dependencies: [
+    .package(url: "https://github.com/pointfreeco/swift-snapshot-testing", from: "1.18.0")
+  ],
+  targets: [
+    // MARK: Core layers (imports flow strictly downward — see products/ios/AGENTS.md)
+    .target(name: "PostHogFoundation"),
+    .target(
+      name: "PostHogAPI",
+      dependencies: ["PostHogFoundation"]
+    ),
+    .target(
+      name: "PostHogQueries",
+      dependencies: ["PostHogFoundation", "PostHogAPI"]
+    ),
+    .target(
+      name: "PostHogAuth",
+      dependencies: ["PostHogFoundation", "PostHogAPI"]
+    ),
+    .target(
+      name: "PostHogDesignSystem",
+      dependencies: ["PostHogFoundation", "PostHogQueries"]
+    ),
+
+    // MARK: Features (never import each other)
+    .target(
+      name: "FeatureDashboards",
+      dependencies: ["PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem"]
+    ),
+    .target(
+      name: "FeatureInsights",
+      dependencies: ["PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem"]
+    ),
+    .target(
+      name: "FeatureFlags",
+      dependencies: ["PostHogFoundation", "PostHogAPI", "PostHogDesignSystem"]
+    ),
+    .target(
+      name: "FeatureSettings",
+      dependencies: ["PostHogFoundation", "PostHogAPI", "PostHogAuth", "PostHogDesignSystem"]
+    ),
+
+    // MARK: Shell
+    .target(
+      name: "AppShell",
+      dependencies: [
+        "PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogAuth", "PostHogDesignSystem",
+        "FeatureDashboards", "FeatureInsights", "FeatureFlags", "FeatureSettings",
+      ]
+    ),
+
+    // MARK: Tests
+    .testTarget(name: "PostHogFoundationTests", dependencies: ["PostHogFoundation"]),
+    .testTarget(name: "PostHogAPITests", dependencies: ["PostHogAPI"]),
+    .testTarget(
+      name: "PostHogQueriesTests",
+      dependencies: ["PostHogQueries"],
+      resources: [.copy("Fixtures")]
+    ),
+    .testTarget(name: "PostHogAuthTests", dependencies: ["PostHogAuth"]),
+    .testTarget(name: "AppShellTests", dependencies: ["AppShell"]),
+    .testTarget(
+      name: "DesignSystemSnapshotTests",
+      dependencies: [
+        "PostHogDesignSystem",
+        .product(name: "SnapshotTesting", package: "swift-snapshot-testing"),
+      ]
+    ),
+  ],
+  swiftLanguageModes: [.v6]
+)

@@ -94,6 +94,8 @@ products/desktop/*
 products/desktop/packages/*
 !products/desktop/packages/agent-shadow
 !products/desktop/packages/agent-shadow/**
+# products/ios is the native Swift app; nothing in it belongs in an image build context.
+products/ios/*
 nodejs/node_modules
 # The image-scrub sidecar is a standalone package nested in nodejs/src; keep its deps and (Stage-2) model
 # artifacts out of the plugin-server build context.

@@ -1,0 +1,24 @@
+{
+  "comment": "Paths the Swift client is allowed to call. update-api-lock.py filters the generated OpenAPI spec to exactly these; check-api-drift.py fails CI when Swift code strays outside them. Grow deliberately — past ~50-60 paths, revisit generated clients (see AGENTS.md).",
+  "paths": [
+    "/api/users/@me/",
+    "/api/organizations/",
+    "/api/organizations/{id}/",
+    "/api/organizations/{organization_id}/projects/",
+    "/api/projects/{id}/",
+    "/api/projects/{project_id}/dashboards/",
+    "/api/projects/{project_id}/dashboards/{id}/",
+    "/api/projects/{project_id}/insights/",
+    "/api/projects/{project_id}/insights/{id}/",
+    "/api/projects/{project_id}/feature_flags/",
+    "/api/projects/{project_id}/feature_flags/{id}/",
+    "/api/projects/{project_id}/feature_flags/{id}/enable/",
+    "/api/projects/{project_id}/feature_flags/{id}/disable/",
+    "/api/projects/{project_id}/feature_flags/{id}/status/",
+    "/api/projects/{project_id}/feature_flags/{id}/user_blast_radius/",
+    "/api/projects/{project_id}/feature_flags/activity/",
+    "/api/projects/{project_id}/feature_flags/{id}/activity/",
+    "/api/projects/{project_id}/query/",
+    "/api/projects/{project_id}/query/{id}/"
+  ]
+}

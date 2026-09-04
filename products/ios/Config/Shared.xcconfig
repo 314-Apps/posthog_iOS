@@ -1,0 +1,6 @@
+// Shared build settings for the PostHog iOS app.
+// Versions are stamped by scripts/set-version.sh in the release workflow.
+MARKETING_VERSION = 0.1.0
+CURRENT_PROJECT_VERSION = 1
+
+PRODUCT_BUNDLE_IDENTIFIER = com.posthog.ios

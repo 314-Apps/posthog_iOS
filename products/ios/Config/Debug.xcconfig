@@ -1,0 +1,5 @@
+#include "Shared.xcconfig"
+
+// Debug builds surface the dev region (localhost:8010) in the region picker.
+POSTHOG_ENABLE_DEV_REGION = YES
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = $(inherited) DEBUG POSTHOG_DEV_REGION

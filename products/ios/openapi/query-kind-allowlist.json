@@ -1,0 +1,16 @@
+{
+  "comment": "Query kinds from frontend/src/queries/schema.json that PostHogQueries models natively. Anything else decodes to DataQuery.unknown and renders an 'Open in PostHog' tile.",
+  "kinds": [
+    "TrendsQuery",
+    "FunnelsQuery",
+    "RetentionQuery",
+    "LifecycleQuery",
+    "StickinessQuery",
+    "PathsQuery",
+    "HogQLQuery",
+    "EventsQuery",
+    "WebOverviewQuery",
+    "InsightVizNode",
+    "DataTableNode"
+  ]
+}
