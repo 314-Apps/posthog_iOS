@@ -46,7 +46,8 @@ struct SignedInShell: View {
           onOpenFlags: { router.selectedTab = .flags },
           onOpenSettings: { showingSettings = true },
           onOpenSwitcher: { showingSwitcher = true },
-          onOpenProduct: { open(product: $0) }
+          onOpenProduct: { open(product: $0) },
+          onOpenPerson: { router.pushOnSelectedTab(.person(id: $0)) }
         )
         .navigationDestination(for: Route.self) { destination(for: $0) }
       }
@@ -82,18 +83,20 @@ struct SignedInShell: View {
       .tag(AppTab.inbox)
 
       NavigationStack(path: $router.maxPath) {
-        MaxChatView(context: context, tokenProvider: session.tokenProvider)
-          .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-              Button {
-                showingMaxHistory = true
-              } label: {
-                Image(systemName: "clock.arrow.circlepath")
-              }
-              .accessibilityLabel("Conversation history")
+        MaxChatView(context: context, tokenProvider: session.tokenProvider) {
+          router.pushOnSelectedTab(.person(id: $0))
+        }
+        .toolbar {
+          ToolbarItem(placement: .topBarTrailing) {
+            Button {
+              showingMaxHistory = true
+            } label: {
+              Image(systemName: "clock.arrow.circlepath")
             }
+            .accessibilityLabel("Conversation history")
           }
-          .navigationDestination(for: Route.self) { destination(for: $0) }
+        }
+        .navigationDestination(for: Route.self) { destination(for: $0) }
       }
       .tabItem { Label("Max", systemImage: "sparkles") }
       .tag(AppTab.max)
@@ -189,9 +192,13 @@ struct SignedInShell: View {
   private func destination(for route: Route) -> some View {
     switch route {
     case .dashboard(let id):
-      DashboardDetailView(context: context, dashboardID: id)
+      DashboardDetailView(context: context, dashboardID: id) {
+        router.pushOnSelectedTab(.person(id: $0))
+      }
     case .insight(let id):
-      InsightDetailView(context: context, insightID: id)
+      InsightDetailView(context: context, insightID: id) {
+        router.pushOnSelectedTab(.person(id: $0))
+      }
     case .flag(let id):
       FlagDetailView(context: context, flagID: id)
     case .errorsList:

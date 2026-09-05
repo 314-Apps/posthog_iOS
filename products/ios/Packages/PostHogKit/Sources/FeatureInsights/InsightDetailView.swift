@@ -1,5 +1,6 @@
 import PostHogAPI
 import PostHogDesignSystem
+import PostHogDrilldown
 import PostHogFoundation
 import PostHogQueries
 import SwiftUI
@@ -8,9 +9,18 @@ import SwiftUI
 /// the query without ever writing back to the saved insight.
 public struct InsightDetailView: View {
   @State private var model: InsightDetailModel
+  @State private var drilldown: DrilldownTarget?
+  @State private var inspecting: QueryInspection?
 
-  public init(context: ProjectContext, insightID: Int) {
+  private let onOpenPerson: (String) -> Void
+
+  public init(
+    context: ProjectContext,
+    insightID: Int,
+    onOpenPerson: @escaping (String) -> Void = { _ in }
+  ) {
     self._model = State(initialValue: InsightDetailModel(context: context, insightID: insightID))
+    self.onOpenPerson = onOpenPerson
   }
 
   private let datePresets: [(String, String)] = [
@@ -58,8 +68,13 @@ public struct InsightDetailView: View {
         PHCard {
           VStack(alignment: .leading, spacing: PHSpacing.md) {
             if let result = model.result, let query = model.query {
-              InsightRenderer(query: query, result: result)
-                .frame(minHeight: 240)
+              InsightRenderer(
+                query: query,
+                result: result,
+                onDrill: { drilldown = DrilldownTarget(source: query, drill: $0) },
+                onInspect: { inspecting = QueryInspection(query: query) }
+              )
+              .frame(minHeight: 240)
             } else {
               SkeletonView().frame(height: 240)
             }
@@ -82,6 +97,20 @@ public struct InsightDetailView: View {
     .background(PHColor.background)
     .navigationTitle(model.insight?.displayName ?? " ")
     .navigationBarTitleDisplayMode(.large)
+    .toolbar {
+      ToolbarItem(placement: .primaryAction) {
+        Button {
+          guard let query = model.query else { return }
+          inspecting = QueryInspection(query: query)
+        } label: {
+          Image(systemName: "info.circle")
+        }
+        .accessibilityLabel("Where this data comes from")
+        .disabled(model.query == nil)
+      }
+    }
+    .actorsDrilldown($drilldown, context: model.context, onOpenPerson: onOpenPerson)
+    .queryProvenance($inspecting)
     .task { await model.load() }
   }
 }

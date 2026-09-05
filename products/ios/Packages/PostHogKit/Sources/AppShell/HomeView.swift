@@ -1,5 +1,6 @@
 import PostHogAPI
 import PostHogDesignSystem
+import PostHogDrilldown
 import PostHogFoundation
 import PostHogQueries
 import SwiftUI
@@ -8,12 +9,15 @@ import SwiftUI
 /// refreshes in the background; each taps through to a deeper surface.
 struct HomeView: View {
   @State private var model: HomeModel
+  @State private var drilldown: DrilldownTarget?
+  @State private var inspecting: QueryInspection?
   private let projectName: String?
   private let onOpenDashboard: (Int) -> Void
   private let onOpenFlags: () -> Void
   private let onOpenSettings: () -> Void
   private let onOpenSwitcher: () -> Void
   private let onOpenProduct: (HomeProduct) -> Void
+  private let onOpenPerson: (String) -> Void
 
   init(
     context: ProjectContext,
@@ -22,7 +26,8 @@ struct HomeView: View {
     onOpenFlags: @escaping () -> Void,
     onOpenSettings: @escaping () -> Void,
     onOpenSwitcher: @escaping () -> Void,
-    onOpenProduct: @escaping (HomeProduct) -> Void
+    onOpenProduct: @escaping (HomeProduct) -> Void,
+    onOpenPerson: @escaping (String) -> Void
   ) {
     self._model = State(initialValue: HomeModel(context: context))
     self.projectName = projectName
@@ -31,6 +36,7 @@ struct HomeView: View {
     self.onOpenSettings = onOpenSettings
     self.onOpenSwitcher = onOpenSwitcher
     self.onOpenProduct = onOpenProduct
+    self.onOpenPerson = onOpenPerson
   }
 
   var body: some View {
@@ -76,6 +82,8 @@ struct HomeView: View {
       await model.load()
     }
     .refreshable { await model.load(forceRefresh: true) }
+    .actorsDrilldown($drilldown, context: model.context, onOpenPerson: onOpenPerson)
+    .queryProvenance($inspecting)
   }
 
   private var todayCard: some View {
@@ -89,15 +97,24 @@ struct HomeView: View {
           }
         }
         if let series = model.todaySeries {
-          HStack(alignment: .bottom, spacing: PHSpacing.lg) {
-            Text(MetricFormat.full(series.first(where: { !$0.isPrevious })?.count ?? 0))
-              .font(PHFont.metricLarge())
-              .phMetricStyle()
-              .foregroundStyle(PHColor.textPrimary)
-              .contentTransition(.numericText())
-            TrendsChartView(series: series.filter { !$0.isPrevious }, style: .bar, showsAxes: false)
-              .frame(height: 48)
+          Button {
+            guard let query = model.todayQuery else { return }
+            drilldown = DrilldownTarget(source: query, drill: .aggregate)
+          } label: {
+            HStack(alignment: .bottom, spacing: PHSpacing.lg) {
+              Text(MetricFormat.full(series.first(where: { !$0.isPrevious })?.count ?? 0))
+                .font(PHFont.metricLarge())
+                .phMetricStyle()
+                .foregroundStyle(PHColor.textPrimary)
+                .contentTransition(.numericText())
+              TrendsChartView(series: series.filter { !$0.isPrevious }, style: .bar, showsAxes: false)
+                .frame(height: 48)
+            }
+            .contentShape(Rectangle())
           }
+          .buttonStyle(.plain)
+          .disabled(model.todayQuery == nil)
+          .accessibilityHint("Shows the people counted here")
         } else {
           SkeletonView().frame(height: 56)
         }
@@ -109,7 +126,10 @@ struct HomeView: View {
     PHCard {
       VStack(alignment: .leading, spacing: PHSpacing.md) {
         PHCardLabel("Web · last 7 days")
-        WebOverviewGridView(items: Array(items.prefix(4)))
+        WebOverviewGridView(items: Array(items.prefix(4))) { _ in
+          guard let query = model.webOverviewQuery else { return }
+          inspecting = QueryInspection(query: query)
+        }
       }
     }
   }
@@ -304,8 +324,10 @@ enum HomeProduct: String, CaseIterable, Identifiable {
 final class HomeModel {
   var widgetProjectName: String?
   private(set) var todaySeries: [SeriesResult]?
+  private(set) var todayQuery: DataQuery?
   private(set) var todayDelta: Double?
   private(set) var webOverview: [WebOverviewItem]?
+  private(set) var webOverviewQuery: DataQuery?
   private(set) var dashboards: [DashboardSummary] = []
   private(set) var flags: [FeatureFlag] = []
 
@@ -338,6 +360,7 @@ final class HomeModel {
       case .series(let series) = result
     else { return }
     todaySeries = series
+    todayQuery = query
     let current = series.first { !$0.isPrevious }?.count ?? 0
     let previous = series.first(where: \.isPrevious)?.count ?? 0
     todayDelta = previous > 0 ? (current - previous) / previous : nil
@@ -357,6 +380,7 @@ final class HomeModel {
       case .webOverview(let items) = result, !items.isEmpty
     else { return }
     webOverview = items
+    webOverviewQuery = query
   }
 
   private func loadDashboards(forceRefresh: Bool) async {

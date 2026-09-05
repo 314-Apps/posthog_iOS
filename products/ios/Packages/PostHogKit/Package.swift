@@ -80,7 +80,9 @@ let package = Package(
     ),
     .target(
       name: "FeatureMax",
-      dependencies: ["PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem"]
+      dependencies: [
+        "PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem", "PostHogDrilldown",
+      ]
     ),
     .target(
       name: "FeatureExperiments",
@@ -114,6 +116,7 @@ let package = Package(
       name: "AppShell",
       dependencies: [
         "PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogAuth", "PostHogDesignSystem",
+        "PostHogDrilldown",
         "FeatureDashboards", "FeatureInsights", "FeatureFlags", "FeatureSettings",
         "FeatureInbox", "FeatureErrors", "FeatureLive", "FeatureReplay", "FeatureMax",
         "FeatureExperiments", "FeatureSurveys", "FeatureWeb", "FeaturePeople",

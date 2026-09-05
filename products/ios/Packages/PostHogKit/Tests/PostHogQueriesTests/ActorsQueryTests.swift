@@ -33,7 +33,7 @@ private let funnelsSource = DataQuery(raw: [
     ])
     let query = ActorsQueryBuilder.make(
       source: saved,
-      drill: .trendsPoint(day: "2026-02-11", series: 1, compare: nil)
+      drill: .trendsPoint(day: "2026-02-11", series: 1, breakdown: nil, compare: nil)
     )
 
     let outer = try #require(query.raw.objectValue)
@@ -58,25 +58,39 @@ private let funnelsSource = DataQuery(raw: [
   @Test func trendsPointCarriesTheComparisonPeriod() throws {
     let query = ActorsQueryBuilder.make(
       source: trendsSource,
-      drill: .trendsPoint(day: "2026-02-11", series: nil, compare: "previous")
+      drill: .trendsPoint(day: "2026-02-11", series: nil, breakdown: nil, compare: "previous")
     )
     let inner = try #require(query.raw["source"]?.objectValue)
     #expect(Set(inner.keys) == ["kind", "source", "day", "compare"])
     #expect(inner["compare"]?.stringValue == "previous")
   }
 
-  @Test func funnelStepRoutesToTheFunnelsActorsNode() throws {
-    let query = ActorsQueryBuilder.make(source: funnelsSource, drill: .funnelStep(order: 2))
+  /// A breakdown chart's rows are one per breakdown value, so the drill scopes
+  /// by that value rather than by a row position.
+  @Test func trendsPointCarriesTheBreakdownValue() throws {
+    let query = ActorsQueryBuilder.make(
+      source: trendsSource,
+      drill: .trendsPoint(day: "2026-02-11", series: nil, breakdown: "Safari", compare: nil)
+    )
+    let inner = try #require(query.raw["source"]?.objectValue)
+    #expect(Set(inner.keys) == ["kind", "source", "day", "breakdown"])
+    #expect(inner["breakdown"]?.stringValue == "Safari")
+  }
+
+  @Test func funnelStepRoutesToTheFunnelsActorsNodeAndCountsFromOne() throws {
+    let query = ActorsQueryBuilder.make(source: funnelsSource, drill: .funnelStep(order: 0))
     let inner = try #require(query.raw["source"]?.objectValue)
     #expect(Set(inner.keys) == ["kind", "source", "funnelStep"])
     #expect(inner["kind"]?.stringValue == "FunnelsActorsQuery")
-    #expect(inner["funnelStep"]?.intValue == 2)
+    // The first step is `order` 0 here and `funnelStep` 1 on the wire. Sending
+    // 0 asks for no step at all.
+    #expect(inner["funnelStep"]?.intValue == 1)
     #expect(inner["source"]?["kind"]?.stringValue == "FunnelsQuery")
   }
 
   /// A funnel-step drill can reach a source that is not a funnel, and neither
   /// drill may leave a scoping key behind on the plain node.
-  @Test(arguments: [ActorsDrill.aggregate, .funnelStep(order: 2)])
+  @Test(arguments: [ActorsDrill.aggregate, .funnelStep(order: 1)])
   func nonFunnelDrillsFallBackToThePlainInsightActorsNode(_ drill: ActorsDrill) throws {
     let query = ActorsQueryBuilder.make(source: trendsSource, drill: drill, limit: 20, offset: 40)
     let outer = try #require(query.raw.objectValue)

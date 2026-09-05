@@ -8,7 +8,8 @@ import PostHogFoundation
 /// narrower than the source query itself.
 public enum ActorsDrill: Sendable, Equatable {
   case aggregate
-  case trendsPoint(day: String?, series: Int?, compare: String?)
+  case trendsPoint(day: String?, series: Int?, breakdown: String?, compare: String?)
+  /// `order` counts from zero, to match `FunnelStep.order`.
   case funnelStep(order: Int)
   case retentionCell(cohortIndex: Int, intervalIndex: Int)
 }
@@ -52,7 +53,9 @@ public enum ActorsQueryBuilder {
       return [
         "kind": "FunnelsActorsQuery",
         "source": insight.raw,
-        "funnelStep": .number(Double(order)),
+        // The API numbers steps from 1, and reads a negative value as "dropped
+        // off at this step" rather than "converted through it".
+        "funnelStep": .number(Double(order + 1)),
       ]
     }
 
@@ -63,9 +66,10 @@ public enum ActorsQueryBuilder {
     switch drill {
     case .aggregate, .funnelStep:
       break
-    case .trendsPoint(let day, let series, let compare):
+    case .trendsPoint(let day, let series, let breakdown, let compare):
       if let day { object["day"] = .string(day) }
       if let series { object["series"] = .number(Double(series)) }
+      if let breakdown { object["breakdown"] = .string(breakdown) }
       if let compare { object["compare"] = .string(compare) }
     case .retentionCell(let cohortIndex, _):
       // `interval` selects the cohort row, not the column: the web app clicks a

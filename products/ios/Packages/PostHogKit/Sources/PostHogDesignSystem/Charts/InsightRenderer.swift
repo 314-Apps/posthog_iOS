@@ -9,17 +9,20 @@ public struct InsightRenderer: View {
   private let result: QueryResult
   private let onOpenInPostHog: (() -> Void)?
   private let onDrill: ((ActorsDrill) -> Void)?
+  private let onInspect: (() -> Void)?
 
   public init(
     query: DataQuery,
     result: QueryResult,
     onOpenInPostHog: (() -> Void)? = nil,
-    onDrill: ((ActorsDrill) -> Void)? = nil
+    onDrill: ((ActorsDrill) -> Void)? = nil,
+    onInspect: (() -> Void)? = nil
   ) {
     self.query = query
     self.result = result
     self.onOpenInPostHog = onOpenInPostHog
     self.onDrill = onDrill
+    self.onInspect = onInspect
   }
 
   private var display: String? {
@@ -45,13 +48,17 @@ public struct InsightRenderer: View {
     case .retention(let rows):
       RetentionGridView(rows: rows, onSelectCell: retentionCellHandler)
     case .webOverview(let items):
-      WebOverviewGridView(items: items)
+      WebOverviewGridView(items: items, onSelectItem: inspectHandler.map { open in { _ in open() } })
     case .table(let table):
-      TableResultView(table: table)
+      TableResultView(table: table, onSelectRow: inspectHandler.map { open in { _ in open() } })
     case .unknown:
       UnsupportedInsightTile(kind: query.renderSource.kind, onOpen: onOpenInPostHog)
     }
   }
+
+  /// Web overview tiles and table rows count things that are not always
+  /// people, so they open the query behind the number instead of a person list.
+  private var inspectHandler: (() -> Void)? { onInspect }
 
   private var aggregateHandler: (() -> Void)? {
     guard let onDrill else { return nil }
@@ -63,10 +70,16 @@ public struct InsightRenderer: View {
   private func trendsPointHandler(series: [SeriesResult]) -> ((Int, Int) -> Void)? {
     guard let onDrill else { return nil }
     return { bucketIndex, seriesIndex in
+      let tapped = seriesIndex < series.count ? series[seriesIndex] : nil
+      let breakdown = tapped?.breakdownValue
       onDrill(
         .trendsPoint(
           day: TrendsBucketResolver.day(for: bucketIndex, in: series),
-          series: seriesIndex,
+          // A breakdown response holds one row per breakdown value, so the
+          // row's position is not a series number. Where the response does not
+          // name the series, the breakdown alone scopes the drill.
+          series: tapped?.actionOrder ?? (breakdown == nil ? seriesIndex : nil),
+          breakdown: breakdown,
           compare: "current"
         )
       )

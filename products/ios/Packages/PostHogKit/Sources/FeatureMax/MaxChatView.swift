@@ -1,5 +1,6 @@
 import PostHogAPI
 import PostHogDesignSystem
+import PostHogDrilldown
 import PostHogFoundation
 import PostHogQueries
 import SwiftUI
@@ -8,6 +9,7 @@ import SwiftUI
 public struct MaxChatView: View {
   @State private var model: MaxChatModel
   @State private var draft = ""
+  @State private var drilldown: DrilldownTarget?
 
   private static let suggestedPrompts = [
     "What changed in signups this week?",
@@ -17,8 +19,15 @@ public struct MaxChatView: View {
 
   private let bottomAnchorID = "max-thread-bottom"
 
-  public init(context: ProjectContext, tokenProvider: TokenProviding) {
+  private let onOpenPerson: (String) -> Void
+
+  public init(
+    context: ProjectContext,
+    tokenProvider: TokenProviding,
+    onOpenPerson: @escaping (String) -> Void = { _ in }
+  ) {
     self._model = State(initialValue: MaxChatModel(context: context, tokenProvider: tokenProvider))
+    self.onOpenPerson = onOpenPerson
   }
 
   public var body: some View {
@@ -37,6 +46,7 @@ public struct MaxChatView: View {
     .background(PHColor.background)
     .navigationTitle(model.conversationTitle ?? "Max")
     .navigationBarTitleDisplayMode(.inline)
+    .actorsDrilldown($drilldown, context: model.context, onOpenPerson: onOpenPerson)
   }
 
   private var canSend: Bool {
@@ -110,8 +120,12 @@ public struct MaxChatView: View {
   private func assistantBubble(_ message: MaxMessage) -> some View {
     if let viz = message.visualization {
       PHCard {
-        InsightRenderer(query: viz.query ?? DataQuery(raw: .object([:])), result: viz.result)
-          .frame(maxHeight: 240)
+        InsightRenderer(
+          query: viz.query ?? DataQuery(raw: .object([:])),
+          result: viz.result,
+          onDrill: viz.query.map { query in { drilldown = DrilldownTarget(source: query, drill: $0) } }
+        )
+        .frame(maxHeight: 240)
       }
     } else if !message.text.isEmpty {
       // LocalizedStringKey gives streamed answers basic markdown for free.

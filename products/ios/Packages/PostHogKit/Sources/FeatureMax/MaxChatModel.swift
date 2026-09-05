@@ -45,7 +45,7 @@ public final class MaxChatModel {
   public private(set) var errorText: String?
   public private(set) var conversationTitle: String?
 
-  private let context: ProjectContext
+  let context: ProjectContext
   private let tokenProvider: TokenProviding
   private let streamFactory: StreamFactory
   /// Minted on first send so every later turn continues the same conversation.

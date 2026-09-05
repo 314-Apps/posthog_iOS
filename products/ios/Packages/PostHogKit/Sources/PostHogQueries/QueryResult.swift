@@ -49,6 +49,11 @@ public struct SeriesResult: Sendable, Equatable {
   public let aggregatedValue: Double?
   public let compareLabel: String?
   public let breakdownValue: String?
+  /// Which of the source query's series this row came from. Absent on
+  /// responses that do not name it, and on a breakdown row it is the only way
+  /// to tell, because the rows are one per breakdown value rather than one per
+  /// series.
+  public let actionOrder: Int?
 
   init?(raw: JSONValue) {
     guard let object = raw.objectValue else { return nil }
@@ -60,6 +65,7 @@ public struct SeriesResult: Sendable, Equatable {
     self.aggregatedValue = object["aggregated_value"]?.numberValue
     self.compareLabel = object["compare_label"]?.stringValue
     self.breakdownValue = object["breakdown_value"]?.stringValue
+    self.actionOrder = object["action"]?["order"]?.intValue
   }
 
   public var isPrevious: Bool { compareLabel == "previous" }

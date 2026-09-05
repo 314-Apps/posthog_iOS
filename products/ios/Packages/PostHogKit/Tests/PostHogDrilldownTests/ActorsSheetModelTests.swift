@@ -14,7 +14,12 @@ private let sourceQuery = DataQuery(raw: [
   "series": [["kind": "EventsNode", "event": "checkout_completed"]],
 ])
 
-private let drill = ActorsDrill.trendsPoint(day: "2026-02-03", series: 0, compare: nil)
+private let drill = ActorsDrill.trendsPoint(
+  day: "2026-02-03",
+  series: 0,
+  breakdown: nil,
+  compare: nil
+)
 
 private struct SamplePerson {
   let id: String

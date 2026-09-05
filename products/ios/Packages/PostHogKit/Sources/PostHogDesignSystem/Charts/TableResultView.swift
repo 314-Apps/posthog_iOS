@@ -67,9 +67,9 @@ public struct TableResultView: View {
   private func cellLabel(_ value: JSONValue, columnIndex: Int) -> String {
     let shown = display(value)
     guard table.columns.indices.contains(columnIndex) else {
-      return "\(shown). Double tap to see the details."
+      return "\(shown). Double tap to see where this data comes from."
     }
-    return "\(table.columns[columnIndex]), \(shown). Double tap to see the details."
+    return "\(table.columns[columnIndex]), \(shown). Double tap to see where this data comes from."
   }
 
   private func display(_ value: JSONValue) -> String {

@@ -48,7 +48,7 @@ public struct WebOverviewGridView: View {
   }
 
   private func tileLabel(_ item: WebOverviewItem) -> String {
-    "\(item.key.capitalizedFirst), \(formattedValue(item)). Double tap to see the details."
+    "\(item.key.capitalizedFirst), \(formattedValue(item)). Double tap to see where this data comes from."
   }
 
   private func formattedValue(_ item: WebOverviewItem) -> String {

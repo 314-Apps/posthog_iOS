@@ -1,5 +1,6 @@
 import PostHogAPI
 import PostHogDesignSystem
+import PostHogDrilldown
 import PostHogFoundation
 import PostHogQueries
 import SwiftUI
@@ -8,9 +9,18 @@ import SwiftUI
 /// Tiles paint from the serializer's cached result and refresh lazily.
 public struct DashboardDetailView: View {
   @State private var model: DashboardDetailModel
+  @State private var drilldown: DrilldownTarget?
+  @State private var inspecting: QueryInspection?
 
-  public init(context: ProjectContext, dashboardID: Int) {
+  private let onOpenPerson: (String) -> Void
+
+  public init(
+    context: ProjectContext,
+    dashboardID: Int,
+    onOpenPerson: @escaping (String) -> Void = { _ in }
+  ) {
     self._model = State(initialValue: DashboardDetailModel(context: context, dashboardID: dashboardID))
+    self.onOpenPerson = onOpenPerson
   }
 
   private let presets: [(String, String?)] = [
@@ -34,8 +44,14 @@ public struct DashboardDetailView: View {
 
         LazyVStack(spacing: PHSpacing.md) {
           ForEach(model.tiles) { tile in
-            TileCardView(tile: tile)
-              .task { await model.refreshTileIfNeeded(tile.id) }
+            TileCardView(
+              tile: tile,
+              onDrill: { source, drill in
+                drilldown = DrilldownTarget(source: source, drill: drill)
+              },
+              onInspect: { inspecting = QueryInspection(query: $0) }
+            )
+            .task { await model.refreshTileIfNeeded(tile.id) }
           }
         }
         .padding(.horizontal, PHSpacing.lg)
@@ -45,6 +61,8 @@ public struct DashboardDetailView: View {
     .background(PHColor.background)
     .navigationTitle(model.name)
     .navigationBarTitleDisplayMode(.large)
+    .actorsDrilldown($drilldown, context: model.context, onOpenPerson: onOpenPerson)
+    .queryProvenance($inspecting)
     .task { await model.load() }
     .refreshable { await model.load(forceRefresh: true) }
   }
@@ -66,6 +84,8 @@ struct TileState: Identifiable, Sendable {
 
 private struct TileCardView: View {
   let tile: TileState
+  let onDrill: (DataQuery, ActorsDrill) -> Void
+  let onInspect: (DataQuery) -> Void
 
   var body: some View {
     PHCard {
@@ -83,7 +103,12 @@ private struct TileCardView: View {
             .font(.subheadline)
             .foregroundStyle(PHColor.textPrimary)
         case .insight(let query, let result):
-          InsightRenderer(query: query, result: result)
+          InsightRenderer(
+            query: query,
+            result: result,
+            onDrill: { onDrill(query, $0) },
+            onInspect: { onInspect(query) }
+          )
         case .failed:
           UnsupportedInsightTile(kind: "unavailable")
         }
@@ -99,7 +124,7 @@ final class DashboardDetailModel {
   private(set) var tiles: [TileState] = []
   var dateFromOverride: String??
 
-  private let context: ProjectContext
+  let context: ProjectContext
   private let dashboardID: Int
   private var queriesByTile: [Int: DataQuery] = [:]
   private var refreshedTiles: Set<Int> = []
