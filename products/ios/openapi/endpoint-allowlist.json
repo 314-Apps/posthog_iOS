@@ -30,6 +30,14 @@
     "/api/projects/{project_id}/alerts/",
     "/api/projects/{project_id}/alerts/{id}/",
     "/api/users/@me/push_tokens/",
-    "/api/users/@me/push_tokens/unregister/"
+    "/api/users/@me/push_tokens/unregister/",
+    "/api/projects/{project_id}/session_recordings/",
+    "/api/projects/{project_id}/session_recordings/{id}/",
+    "/api/projects/{project_id}/session_recordings/{recording_id}/sharing/",
+    "/api/projects/{project_id}/exports/",
+    "/api/projects/{project_id}/exports/{id}/",
+    "/api/projects/{project_id}/exports/{id}/content/",
+    "/api/projects/{project_id}/conversations/",
+    "/api/projects/{project_id}/conversations/{id}/"
   ]
 }

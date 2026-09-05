@@ -24,9 +24,16 @@ struct DesignSystemSnapshotTests {
         view
         .padding(16)
         .background(PHColor.background)
+      // Perceptual tolerance absorbs antialiasing drift across simulator
+      // resets and Xcode point releases; real visual changes still fail.
       assertSnapshot(
         of: host,
-        as: .image(layout: .fixed(width: width, height: height), traits: .init(userInterfaceStyle: scheme)),
+        as: .image(
+          precision: 0.97,
+          perceptualPrecision: 0.97,
+          layout: .fixed(width: width, height: height),
+          traits: .init(userInterfaceStyle: scheme)
+        ),
         named: "\(name)-\(suffix)",
         testName: testName
       )

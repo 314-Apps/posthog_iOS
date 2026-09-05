@@ -7,6 +7,7 @@ public enum AppTab: String, Sendable, CaseIterable {
   case home
   case dashboards
   case flags
+  case inbox
 }
 
 /// Screens the app can navigate to. Serializable so deep links and state
@@ -15,6 +16,9 @@ public enum Route: Hashable, Sendable {
   case dashboard(id: Int)
   case insight(id: Int)
   case flag(id: Int)
+  case errorsList
+  case errorIssue(id: String)
+  case liveEvents
 }
 
 /// One router: the selected tab plus a NavigationStack path per tab.
@@ -25,6 +29,7 @@ public final class Router {
   public var homePath = NavigationPath()
   public var dashboardsPath = NavigationPath()
   public var flagsPath = NavigationPath()
+  public var inboxPath = NavigationPath()
 
   public init() {}
 
@@ -36,6 +41,18 @@ public final class Router {
     case .flag:
       selectedTab = .flags
       flagsPath.append(route)
+    case .errorsList, .errorIssue, .liveEvents:
+      pushOnSelectedTab(route)
+    }
+  }
+
+  /// Pushes without switching tabs (Home chips, inbox row taps).
+  public func pushOnSelectedTab(_ route: Route) {
+    switch selectedTab {
+    case .home: homePath.append(route)
+    case .dashboards: dashboardsPath.append(route)
+    case .flags: flagsPath.append(route)
+    case .inbox: inboxPath.append(route)
     }
   }
 

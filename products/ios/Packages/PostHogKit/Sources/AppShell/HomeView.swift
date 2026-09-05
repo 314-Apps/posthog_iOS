@@ -13,6 +13,9 @@ struct HomeView: View {
   private let onOpenFlags: () -> Void
   private let onOpenSettings: () -> Void
   private let onOpenSwitcher: () -> Void
+  private let onOpenErrors: () -> Void
+  private let onOpenLive: () -> Void
+  private let onOpenWeb: (String) -> Void
 
   init(
     context: ProjectContext,
@@ -20,7 +23,10 @@ struct HomeView: View {
     onOpenDashboard: @escaping (Int) -> Void,
     onOpenFlags: @escaping () -> Void,
     onOpenSettings: @escaping () -> Void,
-    onOpenSwitcher: @escaping () -> Void
+    onOpenSwitcher: @escaping () -> Void,
+    onOpenErrors: @escaping () -> Void,
+    onOpenLive: @escaping () -> Void,
+    onOpenWeb: @escaping (String) -> Void
   ) {
     self._model = State(initialValue: HomeModel(context: context))
     self.projectName = projectName
@@ -28,6 +34,9 @@ struct HomeView: View {
     self.onOpenFlags = onOpenFlags
     self.onOpenSettings = onOpenSettings
     self.onOpenSwitcher = onOpenSwitcher
+    self.onOpenErrors = onOpenErrors
+    self.onOpenLive = onOpenLive
+    self.onOpenWeb = onOpenWeb
   }
 
   var body: some View {
@@ -39,6 +48,7 @@ struct HomeView: View {
         }
         dashboardsSection
         flagsSection
+        productsSection
       }
       .padding(.horizontal, PHSpacing.lg)
       .padding(.bottom, PHSpacing.xl)
@@ -149,6 +159,40 @@ struct HomeView: View {
         }
       }
     }
+  }
+
+  private var productsSection: some View {
+    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: PHSpacing.sm + 2) {
+      productChip("Errors", systemImage: "ant", action: onOpenErrors)
+      productChip("Live", systemImage: "bolt", action: onOpenLive)
+      productChip("Replay", systemImage: "play.rectangle") { onOpenWeb("/replay/home") }
+      productChip("Persons", systemImage: "person.2") { onOpenWeb("/persons") }
+    }
+  }
+
+  private func productChip(
+    _ title: String,
+    systemImage: String,
+    action: @escaping () -> Void
+  ) -> some View {
+    Button(action: action) {
+      VStack(spacing: 6) {
+        Image(systemName: systemImage)
+          .font(.body.weight(.medium))
+          .foregroundStyle(PHColor.textPrimary)
+        Text(title)
+          .font(.caption2.weight(.semibold))
+          .foregroundStyle(PHColor.textSecondary)
+      }
+      .frame(maxWidth: .infinity, minHeight: 58)
+      .background(PHColor.surface)
+      .clipShape(RoundedRectangle(cornerRadius: PHRadius.control, style: .continuous))
+      .overlay(
+        RoundedRectangle(cornerRadius: PHRadius.control, style: .continuous)
+          .strokeBorder(PHColor.border, lineWidth: 1)
+      )
+    }
+    .buttonStyle(.plain)
   }
 
   private var flagsSection: some View {

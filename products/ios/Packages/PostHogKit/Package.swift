@@ -60,6 +60,14 @@ let package = Package(
       name: "FeatureLive",
       dependencies: ["PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem"]
     ),
+    .target(
+      name: "FeatureReplay",
+      dependencies: ["PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem"]
+    ),
+    .target(
+      name: "FeatureMax",
+      dependencies: ["PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem"]
+    ),
 
     // MARK: Shell
     .target(
@@ -67,7 +75,7 @@ let package = Package(
       dependencies: [
         "PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogAuth", "PostHogDesignSystem",
         "FeatureDashboards", "FeatureInsights", "FeatureFlags", "FeatureSettings",
-        "FeatureInbox", "FeatureErrors", "FeatureLive",
+        "FeatureInbox", "FeatureErrors", "FeatureLive", "FeatureReplay", "FeatureMax",
       ]
     ),
 
@@ -90,6 +98,8 @@ let package = Package(
     .testTarget(name: "FeatureErrorsTests", dependencies: ["FeatureErrors", "PostHogTestSupport"]),
     .testTarget(name: "FeatureLiveTests", dependencies: ["FeatureLive", "PostHogTestSupport"]),
     .testTarget(name: "FeatureInsightsTests", dependencies: ["FeatureInsights", "PostHogTestSupport"]),
+    .testTarget(name: "FeatureReplayTests", dependencies: ["FeatureReplay", "PostHogTestSupport"]),
+    .testTarget(name: "FeatureMaxTests", dependencies: ["FeatureMax", "PostHogTestSupport"]),
     .testTarget(
       name: "DesignSystemSnapshotTests",
       dependencies: [

@@ -73,6 +73,9 @@ public struct InsightDetailView: View {
             .foregroundStyle(PHColor.textSecondary)
             .padding(.horizontal, PHSpacing.lg)
         }
+
+        InsightAlertsSection(context: model.context, insightID: model.insightID)
+          .padding(.horizontal, PHSpacing.lg)
       }
       .padding(.bottom, PHSpacing.xl)
     }
@@ -94,8 +97,8 @@ final class InsightDetailModel {
   var interval: String?
 
   private var savedQuery: DataQuery?
-  private let context: ProjectContext
-  private let insightID: Int
+  let context: ProjectContext
+  let insightID: Int
 
   init(context: ProjectContext, insightID: Int) {
     self.context = context

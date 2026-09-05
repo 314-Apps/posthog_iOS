@@ -72,6 +72,18 @@
             {"id": "1", "activity": "updated", "created_at": "2026-03-14T09:26:53Z",
              "user": {"first_name": "Annika", "email": "annika@example.com"}, "detail": {}}]}
           """#
+      case ("GET", "/api/projects/1/notifications"):
+        return #"""
+          {"count": 1, "next": null, "previous": null, "results": [
+            {"id": "n1", "type": "alert_firing", "title": "Alert firing: API error rate",
+             "body": "Error rate above 0.5% for 15 min on API health",
+             "priority": "critical", "created_at": "2026-03-14T09:12:00Z", "is_read": false,
+             "resource_type": "insight", "resource_id": "500"}]}
+          """#
+      case ("GET", "/api/projects/1/notifications/unread_count"):
+        return #"{"count": 1}"#
+      case ("GET", "/api/projects/1/alerts"):
+        return #"{"count": 0, "next": null, "previous": null, "results": []}"#
       case ("POST", "/api/projects/1/query"):
         return #"""
           {"results": [{"label": "dau", "count": 12847,
