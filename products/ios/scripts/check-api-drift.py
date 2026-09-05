@@ -47,6 +47,9 @@ def main() -> None:
     allowed = {normalize(p) for p in allowlist}
 
     for file in swift_files:
+        # Mock servers match concrete fixture paths, not client templates.
+        if file.name == "UITestSupport.swift":
+            continue
         for literal in PATH_LITERAL.findall(file.read_text()):
             if normalize(literal) not in allowed:
                 errors.append(

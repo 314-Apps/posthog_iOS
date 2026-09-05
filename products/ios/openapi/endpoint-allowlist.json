@@ -19,6 +19,17 @@
     "/api/projects/{project_id}/feature_flags/activity/",
     "/api/projects/{project_id}/feature_flags/{id}/activity/",
     "/api/projects/{project_id}/query/",
-    "/api/projects/{project_id}/query/{id}/"
+    "/api/projects/{project_id}/query/{id}/",
+    "/api/projects/{project_id}/notifications/",
+    "/api/projects/{project_id}/notifications/unread_count/",
+    "/api/projects/{project_id}/notifications/{id}/mark_read/",
+    "/api/projects/{project_id}/notifications/{id}/mark_unread/",
+    "/api/projects/{project_id}/notifications/mark_all_read/",
+    "/api/projects/{project_id}/error_tracking/issues/",
+    "/api/projects/{project_id}/error_tracking/issues/{id}/",
+    "/api/projects/{project_id}/alerts/",
+    "/api/projects/{project_id}/alerts/{id}/",
+    "/api/users/@me/push_tokens/",
+    "/api/users/@me/push_tokens/unregister/"
   ]
 }

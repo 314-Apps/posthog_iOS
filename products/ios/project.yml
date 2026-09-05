@@ -69,5 +69,9 @@ schemes:
         - package: PostHogKit/PostHogAuthTests
         - package: PostHogKit/AppShellTests
         - package: PostHogKit/DesignSystemSnapshotTests
+        - package: PostHogKit/FeatureInboxTests
+        - package: PostHogKit/FeatureErrorsTests
+        - package: PostHogKit/FeatureLiveTests
+        - package: PostHogKit/FeatureInsightsTests
     archive:
       config: Release
