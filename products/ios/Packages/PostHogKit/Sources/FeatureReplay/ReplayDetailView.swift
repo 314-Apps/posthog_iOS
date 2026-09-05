@@ -103,8 +103,8 @@ public struct ReplayDetailView: View {
       PHCard {
         VStack(alignment: .leading, spacing: PHSpacing.md) {
           Text(
-            "Replay can't be embedded for this organization. Sharing is turned off "
-              + "in its security settings. Watch this recording on the web instead."
+            "This recording can't play in the app yet. Watch it on the web, "
+              + "where it plays without a shared link."
           )
           .font(.subheadline)
           .foregroundStyle(PHColor.textSecondary)

@@ -153,15 +153,11 @@ extension APIClient {
     try await send(.get("/api/projects/\(projectID)/session_recordings/\(sessionID)/"))
   }
 
+  /// Reads an existing share. There is deliberately no call that creates one:
+  /// an enabled share is readable by anyone who has the link, with no login, so
+  /// the app must never turn one on to play a recording.
   public func recordingSharing(projectID: Int, sessionID: String) async throws -> RecordingSharing {
     try await send(.get("/api/projects/\(projectID)/session_recordings/\(sessionID)/sharing/"))
-  }
-
-  public func enableRecordingSharing(projectID: Int, sessionID: String) async throws -> RecordingSharing {
-    let body = try Self.makeEncoder().encode(["enabled": true])
-    return try await send(
-      .patch("/api/projects/\(projectID)/session_recordings/\(sessionID)/sharing/", body: body)
-    )
   }
 
   /// Starts a server-side video render and returns the export id to poll.

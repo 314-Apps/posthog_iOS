@@ -34,24 +34,18 @@ import Testing
     #expect(transport.requests[0].httpMethod == "GET")
   }
 
-  @Test func disabledSharingIsEnabledWithAPatchFirst() async throws {
+  /// An enabled share serves the recording to anyone holding the link, with no
+  /// login. Opening a recording must never create one, so an unshared recording
+  /// reports itself unplayable and the app sends exactly one read.
+  @Test func anUnsharedRecordingIsNeverPublishedToPlayIt() async {
     let disabled = Data(#"{"enabled": false, "access_token": null}"#.utf8)
-    let enabled = Data(#"{"enabled": true, "access_token": "tok456"}"#.utf8)
-    let transport = StubTransport(script: [
-      .response(status: 200, body: disabled),
-      .response(status: 200, body: enabled),
-    ])
+    let transport = StubTransport(script: [.response(status: 200, body: disabled)])
     let model = makeModel(transport: transport)
     await model.load()
 
-    let expected = URL(string: "https://us.posthog.com/embedded/tok456?whitelabel&noHeader")!
-    #expect(model.state == .ready(expected))
-
-    let patch = transport.requests[1]
-    #expect(patch.httpMethod == "PATCH")
-    #expect(patch.url?.path() == "/api/projects/1/session_recordings/session-1/sharing/")
-    let body = try JSONDecoder().decode(JSONValue.self, from: patch.httpBody ?? Data())
-    #expect(body == ["enabled": true])
+    #expect(model.state == .unavailable)
+    #expect(transport.callCount == 1)
+    #expect(transport.requests.allSatisfy { $0.httpMethod == "GET" })
   }
 
   @Test(arguments: zip([403, 500], [ReplayPlayerModel.State.unavailable, .failed]))

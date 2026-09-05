@@ -4,15 +4,18 @@ import PostHogAPI
 import PostHogFoundation
 import PostHogQueries
 
-/// Bootstraps the embedded player: reads the recording's sharing state,
-/// enables it when it is off, and builds the `/embedded/<token>` URL.
+/// Bootstraps the embedded player from a share the recording already has.
+///
+/// It never creates one. An enabled share serves the recording to anyone with
+/// the link and no login, so a recording that is not already shared stays
+/// unplayable here rather than being published to make it play.
 @MainActor
 @Observable
 public final class ReplayPlayerModel {
   public enum State: Equatable, Sendable {
     case loading
     case ready(URL)
-    /// The organization forbids public sharing, so embedding cannot work.
+    /// This recording has no share to play through.
     case unavailable
     case failed
   }
@@ -30,16 +33,10 @@ public final class ReplayPlayerModel {
   public func load() async {
     state = .loading
     do {
-      var sharing = try await context.client.recordingSharing(
+      let sharing = try await context.client.recordingSharing(
         projectID: context.projectID,
         sessionID: sessionID
       )
-      if !sharing.enabled {
-        sharing = try await context.client.enableRecordingSharing(
-          projectID: context.projectID,
-          sessionID: sessionID
-        )
-      }
       guard sharing.enabled, let token = sharing.accessToken,
         let url = Self.embedURL(region: context.region, token: token)
       else {
@@ -48,17 +45,17 @@ public final class ReplayPlayerModel {
       }
       state = .ready(url)
     } catch let error as APIError {
-      PHLog.api.error("recording sharing bootstrap failed: \(error)")
-      state = isSharingForbidden(error) ? .unavailable : .failed
+      PHLog.api.error("recording share lookup failed: \(error)")
+      state = hasNoShareToRead(error) ? .unavailable : .failed
     } catch {
-      PHLog.api.error("recording sharing bootstrap failed: \(error)")
+      PHLog.api.error("recording share lookup failed: \(error)")
       state = .failed
     }
   }
 
-  /// A 4xx means the org's security settings turned public sharing off; other
-  /// failures are transient and keep the retry path.
-  private func isSharingForbidden(_ error: APIError) -> Bool {
+  /// A 4xx says this session has no share the caller may read, whatever the
+  /// reason. Anything else is transient and keeps the retry path.
+  private func hasNoShareToRead(_ error: APIError) -> Bool {
     if case .server(let status, _, _, _) = error {
       return (400..<500).contains(status)
     }
