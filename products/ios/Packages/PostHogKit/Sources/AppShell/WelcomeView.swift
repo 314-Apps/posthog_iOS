@@ -8,6 +8,7 @@ struct WelcomeView: View {
   @Environment(SessionStore.self) private var session
 
   @State private var region: Region = .us
+  @State private var showingSelfHosted = false
 
   private var regions: [Region] {
     #if POSTHOG_DEV_REGION
@@ -60,9 +61,19 @@ struct WelcomeView: View {
             .foregroundStyle(PHColor.danger)
             .multilineTextAlignment(.center)
         }
+        Button("Use a self-hosted instance") {
+          showingSelfHosted = true
+        }
+        .font(.footnote.weight(.semibold))
+        .foregroundStyle(Color(white: 0.62))
+        .frame(minHeight: 44)
       }
       .padding(.horizontal, PHSpacing.xl)
-      .padding(.bottom, 44)
+      .padding(.bottom, 32)
+    }
+    .sheet(isPresented: $showingSelfHosted) {
+      SelfHostedSheet()
+        .presentationDetents([.medium])
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(

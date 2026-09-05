@@ -68,6 +68,30 @@ let package = Package(
       name: "FeatureMax",
       dependencies: ["PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem"]
     ),
+    .target(
+      name: "FeatureExperiments",
+      dependencies: ["PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem"]
+    ),
+    .target(
+      name: "FeatureSurveys",
+      dependencies: ["PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem"]
+    ),
+    .target(
+      name: "FeatureWeb",
+      dependencies: ["PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem"]
+    ),
+    .target(
+      name: "FeaturePeople",
+      dependencies: ["PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem"]
+    ),
+    .target(
+      name: "FeatureSQL",
+      dependencies: ["PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem"]
+    ),
+    .target(
+      name: "FeatureActivity",
+      dependencies: ["PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem"]
+    ),
 
     // MARK: Shell
     .target(
@@ -76,6 +100,8 @@ let package = Package(
         "PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogAuth", "PostHogDesignSystem",
         "FeatureDashboards", "FeatureInsights", "FeatureFlags", "FeatureSettings",
         "FeatureInbox", "FeatureErrors", "FeatureLive", "FeatureReplay", "FeatureMax",
+        "FeatureExperiments", "FeatureSurveys", "FeatureWeb", "FeaturePeople",
+        "FeatureSQL", "FeatureActivity",
       ]
     ),
 
@@ -100,6 +126,15 @@ let package = Package(
     .testTarget(name: "FeatureInsightsTests", dependencies: ["FeatureInsights", "PostHogTestSupport"]),
     .testTarget(name: "FeatureReplayTests", dependencies: ["FeatureReplay", "PostHogTestSupport"]),
     .testTarget(name: "FeatureMaxTests", dependencies: ["FeatureMax", "PostHogTestSupport"]),
+    .testTarget(
+      name: "FeatureExperimentsTests",
+      dependencies: ["FeatureExperiments", "PostHogTestSupport"]
+    ),
+    .testTarget(name: "FeatureSurveysTests", dependencies: ["FeatureSurveys", "PostHogTestSupport"]),
+    .testTarget(name: "FeatureWebTests", dependencies: ["FeatureWeb", "PostHogTestSupport"]),
+    .testTarget(name: "FeaturePeopleTests", dependencies: ["FeaturePeople", "PostHogTestSupport"]),
+    .testTarget(name: "FeatureSQLTests", dependencies: ["FeatureSQL", "PostHogTestSupport"]),
+    .testTarget(name: "FeatureActivityTests", dependencies: ["FeatureActivity", "PostHogTestSupport"]),
     .testTarget(
       name: "DesignSystemSnapshotTests",
       dependencies: [

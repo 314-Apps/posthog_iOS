@@ -38,6 +38,18 @@
     "/api/projects/{project_id}/exports/{id}/",
     "/api/projects/{project_id}/exports/{id}/content/",
     "/api/projects/{project_id}/conversations/",
-    "/api/projects/{project_id}/conversations/{id}/"
+    "/api/projects/{project_id}/conversations/{id}/",
+    "/api/projects/{project_id}/experiments/",
+    "/api/projects/{project_id}/experiments/{id}/",
+    "/api/projects/{project_id}/surveys/",
+    "/api/projects/{project_id}/surveys/{id}/",
+    "/api/projects/{project_id}/surveys/{id}/stats/",
+    "/api/projects/{project_id}/persons/",
+    "/api/projects/{project_id}/persons/{id}/",
+    "/api/projects/{project_id}/cohorts/",
+    "/api/projects/{project_id}/annotations/",
+    "/api/projects/{project_id}/annotations/{id}/",
+    "/api/projects/{project_id}/activity_log/",
+    "/api/billing/"
   ]
 }

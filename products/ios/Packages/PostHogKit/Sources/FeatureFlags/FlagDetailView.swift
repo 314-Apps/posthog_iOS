@@ -227,7 +227,7 @@ final class FlagDetailModel {
         enabled: !current.active
       )
       lastToggleSucceeded.toggle()
-      await context.cache.removeSubtree("\(context.region.rawValue)/\(context.projectID)/flags-list")
+      await context.cache.removeSubtree("\(context.region.storageKey)/\(context.projectID)/flags-list")
       activity =
         (try? await context.client.featureFlagActivity(projectID: context.projectID, flagID: flagID))?
         .results ?? []

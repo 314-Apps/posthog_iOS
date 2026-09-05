@@ -52,6 +52,8 @@ public struct AuthConfiguration: Sendable {
     case .us: "IOS_CLIENT_ID_US_NOT_REGISTERED"
     case .eu: "IOS_CLIENT_ID_EU_NOT_REGISTERED"
     case .dev: "DC5uRLVbGI02YQ82grxgnK6Qn12SXWpCqdPb60oZ"
+    // Self-hosted instances authenticate with a personal API key, never OAuth.
+    case .selfHosted: "SELF_HOSTED_USES_PERSONAL_API_KEY"
     }
   }
 

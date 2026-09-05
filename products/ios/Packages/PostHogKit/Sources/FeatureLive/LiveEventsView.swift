@@ -312,8 +312,12 @@ final class LiveEventsModel {
         phase = .unavailable
         return
       }
+      guard let liveBase = context.region.livestreamBaseURL else {
+        phase = .unavailable
+        return
+      }
       let sse = SSEClient()
-      let url = context.region.livestreamBaseURL.appending(path: "/events")
+      let url = liveBase.appending(path: "/events")
       let headers = ["Authorization": "Bearer \(token)"]
       let feed = LiveFeedModel(events: { sse.events(url: url, headers: headers) })
       self.feed = feed

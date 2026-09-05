@@ -1,6 +1,13 @@
 import Foundation
 import PostHogAPI
 
+/// How a stored session authenticates. Cloud regions use OAuth; self-hosted
+/// instances use a personal API key (no refresh, no expiry).
+public enum AuthMethod: String, Codable, Sendable {
+  case oauth
+  case personalAPIKey
+}
+
 /// Everything the app persists about a signed-in session — one Keychain blob.
 public struct StoredSession: Codable, Sendable, Equatable {
   public var accessToken: String
@@ -11,6 +18,10 @@ public struct StoredSession: Codable, Sendable, Equatable {
   public var scopedTeams: [Int]
   public var selectedProjectID: Int?
   public var selectedOrganizationID: String?
+  /// Optional so blobs written before self-hosted support still decode.
+  public var authMethod: AuthMethod?
+
+  public var isPersonalAPIKey: Bool { authMethod == .personalAPIKey }
 
   public init(
     accessToken: String,
@@ -20,7 +31,8 @@ public struct StoredSession: Codable, Sendable, Equatable {
     scopeVersion: Int,
     scopedTeams: [Int],
     selectedProjectID: Int? = nil,
-    selectedOrganizationID: String? = nil
+    selectedOrganizationID: String? = nil,
+    authMethod: AuthMethod? = .oauth
   ) {
     self.accessToken = accessToken
     self.refreshToken = refreshToken
@@ -30,6 +42,7 @@ public struct StoredSession: Codable, Sendable, Equatable {
     self.scopedTeams = scopedTeams
     self.selectedProjectID = selectedProjectID
     self.selectedOrganizationID = selectedOrganizationID
+    self.authMethod = authMethod
   }
 
   /// Keeps the selected project when still authorized, else falls back to the

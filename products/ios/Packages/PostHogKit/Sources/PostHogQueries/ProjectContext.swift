@@ -20,6 +20,6 @@ public struct ProjectContext: Sendable {
 
   /// Cache keys are namespaced per region + project so switches are clean.
   public func cacheKey(_ resource: String) -> String {
-    "\(region.rawValue)/\(projectID)/\(resource)"
+    "\(region.storageKey)/\(projectID)/\(resource)"
   }
 }

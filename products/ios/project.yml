@@ -75,5 +75,11 @@ schemes:
         - package: PostHogKit/FeatureInsightsTests
         - package: PostHogKit/FeatureReplayTests
         - package: PostHogKit/FeatureMaxTests
+        - package: PostHogKit/FeatureExperimentsTests
+        - package: PostHogKit/FeatureSurveysTests
+        - package: PostHogKit/FeatureWebTests
+        - package: PostHogKit/FeaturePeopleTests
+        - package: PostHogKit/FeatureSQLTests
+        - package: PostHogKit/FeatureActivityTests
     archive:
       config: Release

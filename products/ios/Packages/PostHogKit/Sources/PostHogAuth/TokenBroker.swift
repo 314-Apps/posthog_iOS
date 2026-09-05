@@ -58,6 +58,10 @@ public actor TokenBroker: TokenProviding {
     guard let session else {
       throw TokenRefreshError.authFailure(detail: "no_session")
     }
+    // Personal API keys never refresh; they are valid until revoked.
+    if session.isPersonalAPIKey {
+      return session.accessToken
+    }
     if session.expiresAt.timeIntervalSinceNow > Self.expiryBuffer {
       return session.accessToken
     }
@@ -65,7 +69,14 @@ public actor TokenBroker: TokenProviding {
   }
 
   public func refreshedAccessToken() async throws -> String {
-    try await refresh().accessToken
+    // A 401 on a personal API key means it was revoked — terminal.
+    if let session, session.isPersonalAPIKey {
+      self.session = nil
+      storage.clear()
+      events.yield(.sessionInvalidated)
+      throw TokenRefreshError.authFailure(detail: "personal_api_key_revoked")
+    }
+    return try await refresh().accessToken
   }
 
   // MARK: Refresh

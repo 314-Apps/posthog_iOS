@@ -83,6 +83,43 @@ public final class SessionStore {
     }
   }
 
+  /// Self-hosted sign-in: validate the personal API key against the instance,
+  /// then persist a non-expiring key-backed session.
+  public func signInSelfHosted(host: URL, apiKey: String) async {
+    guard !isSigningIn else { return }
+    isSigningIn = true
+    signInError = nil
+    defer { isSigningIn = false }
+
+    struct StaticKey: TokenProviding {
+      let key: String
+      func validAccessToken() async throws -> String { key }
+      func refreshedAccessToken() async throws -> String {
+        throw TokenRefreshError.authFailure(detail: "personal_api_key_rejected")
+      }
+    }
+
+    let probe = APIClient(baseURL: host, transport: transport, tokens: StaticKey(key: apiKey))
+    do {
+      let me = try await probe.me()
+      let session = StoredSession(
+        accessToken: apiKey,
+        refreshToken: "",
+        expiresAt: .distantFuture,
+        region: .selfHosted(host: host),
+        scopeVersion: AuthConfiguration.scopeVersion,
+        scopedTeams: [],
+        selectedProjectID: me.currentTeamID,
+        authMethod: .personalAPIKey
+      )
+      await broker.adopt(session)
+      adopt(session)
+    } catch {
+      PHLog.auth.error("self-hosted sign-in failed: \(error)")
+      signInError = "Couldn't connect. Check the instance URL and API key, then try again."
+    }
+  }
+
   public func signOut() async {
     PushRegistrar.shared.unregister()
     PushRegistrar.shared.configure(client: nil)
