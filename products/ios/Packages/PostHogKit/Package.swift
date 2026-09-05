@@ -59,14 +59,19 @@ let package = Package(
     ),
 
     // MARK: Tests
+    .target(
+      name: "PostHogTestSupport",
+      dependencies: ["PostHogAPI"],
+      path: "Tests/PostHogTestSupport"
+    ),
     .testTarget(name: "PostHogFoundationTests", dependencies: ["PostHogFoundation"]),
-    .testTarget(name: "PostHogAPITests", dependencies: ["PostHogAPI"]),
+    .testTarget(name: "PostHogAPITests", dependencies: ["PostHogAPI", "PostHogTestSupport"]),
     .testTarget(
       name: "PostHogQueriesTests",
-      dependencies: ["PostHogQueries"],
+      dependencies: ["PostHogQueries", "PostHogTestSupport"],
       resources: [.copy("Fixtures")]
     ),
-    .testTarget(name: "PostHogAuthTests", dependencies: ["PostHogAuth"]),
+    .testTarget(name: "PostHogAuthTests", dependencies: ["PostHogAuth", "PostHogTestSupport"]),
     .testTarget(name: "AppShellTests", dependencies: ["AppShell"]),
     .testTarget(
       name: "DesignSystemSnapshotTests",

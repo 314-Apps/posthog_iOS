@@ -28,6 +28,11 @@ identifier_name:
 type_body_length:
   warning: 350
 
+# Discriminated-union mapping switches (query kinds, retry ladders) run hot here.
+cyclomatic_complexity:
+  warning: 15
+  error: 20
+
 file_length:
   warning: 500
 

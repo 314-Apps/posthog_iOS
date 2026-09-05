@@ -1,0 +1,7 @@
+{
+  "columns": ["event", "total"],
+  "types": ["String", "UInt64"],
+  "results": [["$pageview", 131000], ["user signed up", 11573], ["subscription started", 4918]],
+  "hasMore": true,
+  "hogql": "SELECT event, count() AS total FROM events GROUP BY event"
+}
