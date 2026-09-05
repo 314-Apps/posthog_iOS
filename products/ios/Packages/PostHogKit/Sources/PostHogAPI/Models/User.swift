@@ -9,6 +9,8 @@ public struct User: Decodable, Sendable, Equatable, Identifiable {
   public let organizations: [OrganizationSummary]
   public let currentOrganizationID: String?
   public let currentTeamID: Int?
+  /// The current organization's projects, as this route already returns them.
+  public let currentOrganizationProjects: [Project]
 
   enum CodingKeys: String, CodingKey {
     case id
@@ -22,6 +24,7 @@ public struct User: Decodable, Sendable, Equatable, Identifiable {
 
   enum NestedIDKeys: String, CodingKey {
     case id
+    case projects
   }
 
   public init(from decoder: Decoder) throws {
@@ -34,6 +37,10 @@ public struct User: Decodable, Sendable, Equatable, Identifiable {
       try container.decodeIfPresent([OrganizationSummary].self, forKey: .organizations) ?? []
     let organization = try? container.nestedContainer(keyedBy: NestedIDKeys.self, forKey: .organization)
     self.currentOrganizationID = try organization?.decodeIfPresent(String.self, forKey: .id)
+    // This route already returns the projects the person can see, and unlike
+    // the organization-nested list it accepts a project-scoped key.
+    let nestedProjects = try? organization?.decodeIfPresent([Project].self, forKey: .projects)
+    self.currentOrganizationProjects = nestedProjects.flatMap { $0 } ?? []
     let team = try? container.nestedContainer(keyedBy: NestedIDKeys.self, forKey: .team)
     self.currentTeamID = try team?.decodeIfPresent(Int.self, forKey: .id)
   }
@@ -45,7 +52,8 @@ public struct User: Decodable, Sendable, Equatable, Identifiable {
     firstName: String,
     organizations: [OrganizationSummary],
     currentOrganizationID: String?,
-    currentTeamID: Int?
+    currentTeamID: Int?,
+    currentOrganizationProjects: [Project] = []
   ) {
     self.id = id
     self.uuid = uuid
@@ -54,6 +62,7 @@ public struct User: Decodable, Sendable, Equatable, Identifiable {
     self.organizations = organizations
     self.currentOrganizationID = currentOrganizationID
     self.currentTeamID = currentTeamID
+    self.currentOrganizationProjects = currentOrganizationProjects
   }
 }
 

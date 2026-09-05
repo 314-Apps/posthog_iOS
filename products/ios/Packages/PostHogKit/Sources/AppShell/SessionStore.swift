@@ -157,10 +157,18 @@ public final class SessionStore {
     do {
       let me = try await client.me()
       user = me
-      var projects: [Project] = []
-      for organization in me.organizations {
-        let page = try await client.organizationProjects(organizationID: organization.id)
-        projects.append(contentsOf: page.results)
+      // The current organization's projects ride along on `@me`, which a
+      // project-scoped key may call. The organization-nested list rejects such
+      // a key outright, so one unreachable organization must not empty the
+      // whole switcher.
+      var projects = me.currentOrganizationProjects
+      for organization in me.organizations where organization.id != me.currentOrganizationID {
+        do {
+          let page = try await client.organizationProjects(organizationID: organization.id)
+          projects.append(contentsOf: page.results)
+        } catch {
+          PHLog.api.error("projects unavailable for one organization: \(error)")
+        }
       }
       // Token-scoped teams are the authority when the grant is project-scoped.
       if !session.scopedTeams.isEmpty {
