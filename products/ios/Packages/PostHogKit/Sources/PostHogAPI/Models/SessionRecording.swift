@@ -16,6 +16,14 @@ public struct SessionRecording: Codable, Sendable, Equatable, Identifiable {
   public let consoleErrorCount: Int?
   public let startURL: String?
   public let viewed: Bool
+  /// `web` or a mobile SDK's name. Mobile recordings hold wireframes rather
+  /// than a DOM, so the player has to convert them before it can draw them.
+  public let snapshotSource: String?
+
+  public var isMobileRecording: Bool {
+    guard let snapshotSource else { return false }
+    return snapshotSource != "web" && snapshotSource != "unknown"
+  }
 
   enum CodingKeys: String, CodingKey {
     case id
@@ -28,6 +36,7 @@ public struct SessionRecording: Codable, Sendable, Equatable, Identifiable {
     case consoleErrorCount = "console_error_count"
     case startURL = "start_url"
     case viewed
+    case snapshotSource = "snapshot_source"
   }
 
   public init(
@@ -40,7 +49,8 @@ public struct SessionRecording: Codable, Sendable, Equatable, Identifiable {
     clickCount: Int?,
     consoleErrorCount: Int?,
     startURL: String?,
-    viewed: Bool
+    viewed: Bool,
+    snapshotSource: String? = nil
   ) {
     self.id = id
     self.distinctID = distinctID
@@ -52,6 +62,7 @@ public struct SessionRecording: Codable, Sendable, Equatable, Identifiable {
     self.consoleErrorCount = consoleErrorCount
     self.startURL = startURL
     self.viewed = viewed
+    self.snapshotSource = snapshotSource
   }
 
   public init(from decoder: Decoder) throws {
@@ -75,6 +86,7 @@ public struct SessionRecording: Codable, Sendable, Equatable, Identifiable {
     self.consoleErrorCount = try? container.decode(Int.self, forKey: .consoleErrorCount)
     self.startURL = try? container.decode(String.self, forKey: .startURL)
     self.viewed = (try? container.decode(Bool.self, forKey: .viewed)) ?? false
+    self.snapshotSource = try? container.decode(String.self, forKey: .snapshotSource)
   }
 
   public func encode(to encoder: Encoder) throws {
@@ -89,27 +101,12 @@ public struct SessionRecording: Codable, Sendable, Equatable, Identifiable {
     try container.encodeIfPresent(consoleErrorCount, forKey: .consoleErrorCount)
     try container.encodeIfPresent(startURL, forKey: .startURL)
     try container.encode(viewed, forKey: .viewed)
+    try container.encodeIfPresent(snapshotSource, forKey: .snapshotSource)
   }
 
   /// The list-row and header display string.
   public var personDisplay: String {
     personEmailOrID ?? distinctID ?? "Unknown user"
-  }
-}
-
-/// Public sharing state of one recording; `accessToken` feeds the embed player.
-public struct RecordingSharing: Codable, Sendable, Equatable {
-  public let enabled: Bool
-  public let accessToken: String?
-
-  enum CodingKeys: String, CodingKey {
-    case enabled
-    case accessToken = "access_token"
-  }
-
-  public init(enabled: Bool, accessToken: String?) {
-    self.enabled = enabled
-    self.accessToken = accessToken
   }
 }
 
@@ -151,13 +148,6 @@ extension APIClient {
 
   public func sessionRecording(projectID: Int, sessionID: String) async throws -> SessionRecording {
     try await send(.get("/api/projects/\(projectID)/session_recordings/\(sessionID)/"))
-  }
-
-  /// Reads an existing share. There is deliberately no call that creates one:
-  /// an enabled share is readable by anyone who has the link, with no login, so
-  /// the app must never turn one on to play a recording.
-  public func recordingSharing(projectID: Int, sessionID: String) async throws -> RecordingSharing {
-    try await send(.get("/api/projects/\(projectID)/session_recordings/\(sessionID)/sharing/"))
   }
 
   /// Starts a server-side video render and returns the export id to poll.

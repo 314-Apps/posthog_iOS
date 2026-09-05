@@ -4,7 +4,7 @@ DESTINATION := platform=iOS Simulator,name=iPhone 17
 DERIVED := .build/DerivedData
 SPM_CLONES := .spm-packages
 
-.PHONY: generate build test lint format snapshot-record api-lock check-api clean
+.PHONY: generate build test lint format snapshot-record api-lock check-api player clean
 
 generate:
 	xcodegen generate --spec project.yml --project .
@@ -45,3 +45,9 @@ check-api:
 
 clean:
 	rm -rf $(PROJECT) $(DERIVED) $(SPM_CLONES)
+
+# Rebuilds the replay player and installs it into the app bundle. Needs npm.
+# The artifact is committed because iOS CI checks out only this tree. The build writes
+# the bundled copy itself, so there is no window in which the two can disagree.
+player:
+	cd player && npm install --silent && npm run build

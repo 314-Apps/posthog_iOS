@@ -4,13 +4,12 @@ import PostHogFoundation
 import PostHogQueries
 import SwiftUI
 
-/// One recording: person header, the embedded web player, and a video export
-/// that lands in the share sheet.
+/// One recording: person header, the player, and a video export that lands in
+/// the share sheet.
 public struct ReplayDetailView: View {
   @State private var model: ReplayDetailModel
   @State private var player: ReplayPlayerModel
   @State private var exporter: ReplayExportModel
-  @State private var isWebLoading = true
 
   private let sessionID: String
   private let onOpenWeb: ((String) -> Void)?
@@ -85,29 +84,41 @@ public struct ReplayDetailView: View {
     case .loading:
       SkeletonView(cornerRadius: PHRadius.card)
         .aspectRatio(16.0 / 10.0, contentMode: .fit)
-    case .ready(let url):
-      ZStack {
-        PHColor.background
-        ReplayWebPlayer(url: url, isLoading: $isWebLoading)
-        if isWebLoading {
-          SkeletonView(cornerRadius: PHRadius.card)
+    case .ready(let chunkCount, let isMobile):
+      VStack(spacing: PHSpacing.sm) {
+        ZStack {
+          PHColor.background
+          if let page = ReplayPlayerPage.bundled {
+            ReplayBundledPlayer(
+              loader: player.loader,
+              page: page,
+              chunkCount: chunkCount,
+              isMobileRecording: isMobile,
+              command: player.command,
+              onEvent: { player.handle($0) }
+            )
+          }
+          if player.duration == 0 {
+            SkeletonView(cornerRadius: PHRadius.card)
+              .overlay(loadingProgress)
+          }
+        }
+        .aspectRatio(16.0 / 10.0, contentMode: .fit)
+        .clipShape(RoundedRectangle(cornerRadius: PHRadius.card, style: .continuous))
+        .overlay(
+          RoundedRectangle(cornerRadius: PHRadius.card, style: .continuous)
+            .strokeBorder(PHColor.border, lineWidth: 1)
+        )
+        if player.duration > 0 {
+          ReplayPlayerControls(player: player)
         }
       }
-      .aspectRatio(16.0 / 10.0, contentMode: .fit)
-      .clipShape(RoundedRectangle(cornerRadius: PHRadius.card, style: .continuous))
-      .overlay(
-        RoundedRectangle(cornerRadius: PHRadius.card, style: .continuous)
-          .strokeBorder(PHColor.border, lineWidth: 1)
-      )
-    case .unavailable:
+    case .unavailable(let reason):
       PHCard {
         VStack(alignment: .leading, spacing: PHSpacing.md) {
-          Text(
-            "This recording can't play in the app yet. Watch it on the web, "
-              + "where it plays without a shared link."
-          )
-          .font(.subheadline)
-          .foregroundStyle(PHColor.textSecondary)
+          Text(reason.message)
+            .font(.subheadline)
+            .foregroundStyle(PHColor.textSecondary)
           if let onOpenWeb {
             Button {
               onOpenWeb("/replay/\(sessionID)")
@@ -123,14 +134,13 @@ public struct ReplayDetailView: View {
           }
         }
       }
-    case .failed:
+    case .failed(let message):
       PHCard {
         VStack(alignment: .leading, spacing: PHSpacing.md) {
-          Text("Couldn't load the player. Check your connection and try again.")
+          Text(message)
             .font(.subheadline)
             .foregroundStyle(PHColor.textSecondary)
           Button {
-            isWebLoading = true
             Task { await player.load() }
           } label: {
             Text("Retry")
@@ -143,6 +153,18 @@ public struct ReplayDetailView: View {
           .buttonStyle(.plain)
         }
       }
+    }
+  }
+
+  /// Long recordings arrive in several pieces, so the wait says how far along
+  /// it is rather than showing an unmoving skeleton.
+  @ViewBuilder
+  private var loadingProgress: some View {
+    if player.totalChunks > 1 {
+      Text("Loading \(player.loadedChunks) of \(player.totalChunks)")
+        .font(.footnote)
+        .foregroundStyle(PHColor.textSecondary)
+        .monospacedDigit()
     }
   }
 

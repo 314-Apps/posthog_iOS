@@ -17,7 +17,7 @@ public struct AuthConfiguration: Sendable {
 
   /// Bump when `scopes` changes: a stored session with an older version is
   /// silently discarded on launch so the user re-authorizes with the new set.
-  public static let scopeVersion = 1
+  public static let scopeVersion = 2
 
   /// Everything Phases 1-4 read or control, limited to scopes that exist
   /// server-side today. `user:write` covers push-token registration later.
@@ -36,7 +36,6 @@ public struct AuthConfiguration: Sendable {
     "person:read", "cohort:read",
     "conversation:write",
     "export:read", "export:write",
-    "sharing_configuration:read",
   ]
 
   public static let redirectURI = "posthog-ios://oauth/callback"

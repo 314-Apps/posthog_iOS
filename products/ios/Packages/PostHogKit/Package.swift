@@ -76,7 +76,10 @@ let package = Package(
     ),
     .target(
       name: "FeatureReplay",
-      dependencies: ["PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem"]
+      dependencies: ["PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem"],
+      // Built from products/ios/player and committed, because iOS CI checks out
+      // only this tree and cannot rebuild it.
+      resources: [.copy("Resources/player.html")]
     ),
     .target(
       name: "FeatureMax",

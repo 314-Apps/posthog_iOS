@@ -33,7 +33,7 @@
     "/api/users/@me/push_tokens/unregister/",
     "/api/projects/{project_id}/session_recordings/",
     "/api/projects/{project_id}/session_recordings/{id}/",
-    "/api/projects/{project_id}/session_recordings/{recording_id}/sharing/",
+    "/api/projects/{project_id}/session_recordings/{recording_id}/snapshots/",
     "/api/projects/{project_id}/exports/",
     "/api/projects/{project_id}/exports/{id}/",
     "/api/projects/{project_id}/exports/{id}/content/",
