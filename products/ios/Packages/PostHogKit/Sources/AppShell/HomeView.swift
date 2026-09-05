@@ -111,6 +111,11 @@ struct HomeView: View {
                 .frame(height: 48)
             }
             .contentShape(Rectangle())
+            // Grouped so VoiceOver reads the metric once, instead of the number
+            // and then every bar of the sparkline.
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Unique users today")
+            .accessibilityValue(MetricFormat.full(series.first(where: { !$0.isPrevious })?.count ?? 0))
           }
           .buttonStyle(.plain)
           .disabled(model.todayQuery == nil)

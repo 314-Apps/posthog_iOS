@@ -14,7 +14,7 @@
       var path = request.url?.path() ?? ""
       if path.hasSuffix("/") { path.removeLast() }
       let method = request.httpMethod ?? "GET"
-      let body = respond(path: path, method: method)
+      let body = respond(path: path, method: method, requestBody: request.httpBody)
       let response = HTTPURLResponse(
         url: request.url!,
         statusCode: 200,
@@ -25,7 +25,7 @@
     }
 
     // swiftlint:disable function_body_length
-    private func respond(path: String, method: String) -> String {
+    private func respond(path: String, method: String, requestBody: Data?) -> String {
       switch (method, path) {
       case ("GET", "/api/users/@me"):
         return #"""
@@ -85,6 +85,10 @@
       case ("GET", "/api/projects/1/alerts"):
         return #"{"count": 0, "next": null, "previous": null, "results": []}"#
       case ("POST", "/api/projects/1/query"):
+        // The same endpoint answers a drill-down, so the body picks the shape.
+        if let requestBody, String(bytes: requestBody, encoding: .utf8)?.contains("ActorsQuery") == true {
+          return actorsPage()
+        }
         return #"""
           {"results": [{"label": "dau", "count": 12847,
                         "data": [900, 1100, 1400, 1700, 2100, 2600, 3047],
@@ -99,6 +103,18 @@
       }
     }
     // swiftlint:enable function_body_length
+
+    private func actorsPage() -> String {
+      #"""
+      {"columns": ["person", "created_at"], "hasMore": false, "missing_actors_count": 0,
+       "hogql": "SELECT persons.id FROM persons LIMIT 100",
+       "results": [
+         [{"id": "0198c4a1-0000-4000-8000-000000000001", "distinct_ids": ["seat-1a2b3c"],
+           "properties": {"email": "ada@example.com"}}, "2026-03-14T09:00:00Z"],
+         [{"id": "0198c4a1-0000-4000-8000-000000000002", "distinct_ids": ["seat-4d5e6f"],
+           "properties": {"name": "Rowan Pike"}}, "2026-03-14T09:05:00Z"]]}
+      """#
+    }
 
     private func flagsList() -> String {
       #"{"count": 1, "next": null, "previous": null, "results": [\#(flagJSON())]}"#

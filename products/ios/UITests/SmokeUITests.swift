@@ -52,6 +52,25 @@ final class SmokeUITests: XCTestCase {
     XCTAssertTrue(app.staticTexts["Weekly signups"].waitForExistence(timeout: 15))
   }
 
+  /// The whole drill-down chain: a number on screen, the people it counted,
+  /// and one of them opened.
+  @MainActor
+  func testTappingANumberShowsThePeopleBehindIt() {
+    let app = launch(scenario: "signedIn")
+    let pulse = app.buttons.matching(
+      NSPredicate(format: "label BEGINSWITH 'Unique users today'")
+    ).firstMatch
+    XCTAssertTrue(pulse.waitForExistence(timeout: 15))
+    pulse.tap()
+
+    XCTAssertTrue(app.staticTexts["ada@example.com"].waitForExistence(timeout: 10))
+    XCTAssertTrue(app.staticTexts["Rowan Pike"].exists)
+
+    app.staticTexts["ada@example.com"].tap()
+    // Opening a person closes the sheet and pushes onto the tab's stack.
+    XCTAssertTrue(app.buttons["Done"].waitForNonExistence(timeout: 10))
+  }
+
   @MainActor
   func testFlagToggleRoundTrip() {
     let app = launch(scenario: "signedIn")
