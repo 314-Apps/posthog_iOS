@@ -8,7 +8,11 @@ struct PostHogApp: App {
   private let dependencies: AppDependencies
 
   init() {
-    self.dependencies = AppDependencies.live(launchConfiguration: LaunchConfiguration.current)
+    let launch = LaunchConfiguration.current
+    self.dependencies = AppDependencies.live(launchConfiguration: launch)
+    if launch == .production {
+      Analytics.bootstrap()
+    }
   }
 
   var body: some Scene {

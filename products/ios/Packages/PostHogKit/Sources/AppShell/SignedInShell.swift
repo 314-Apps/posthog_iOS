@@ -1,3 +1,4 @@
+import CoreSpotlight
 import FeatureActivity
 import FeatureDashboards
 import FeatureErrors
@@ -139,6 +140,16 @@ struct SignedInShell: View {
     }
     .task { await session.loadProjects() }
     .onAppear { consumeHandoff() }
+    .onContinueUserActivity(CSSearchableItemActionType) { activity in
+      guard
+        let identifier = activity.userInfo?[CSSearchableItemActivityIdentifier] as? String,
+        let route = SpotlightIndexer.route(for: identifier, currentProjectID: context.projectID)
+      else { return }
+      router.open(route)
+    }
+    .onChange(of: router.selectedTab) { _, tab in
+      Analytics.screen(tab.rawValue)
+    }
     .onChange(of: scenePhase) { _, phase in
       if phase == .active { consumeHandoff() }
     }

@@ -31,6 +31,8 @@
 			</array>
 		</dict>
 	</array>
+	<key>PostHogDogfoodAPIKey</key>
+	<string>$(POSTHOG_DOGFOOD_API_KEY)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSAppTransportSecurity</key>

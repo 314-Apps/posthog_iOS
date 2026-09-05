@@ -309,7 +309,7 @@ final class HomeModel {
   private(set) var dashboards: [DashboardSummary] = []
   private(set) var flags: [FeatureFlag] = []
 
-  private let context: ProjectContext
+  let context: ProjectContext
 
   init(context: ProjectContext) {
     self.context = context
@@ -322,6 +322,7 @@ final class HomeModel {
       group.addTask { await self.loadDashboards(forceRefresh: forceRefresh) }
       group.addTask { await self.loadFlags(forceRefresh: forceRefresh) }
     }
+    SpotlightIndexer.index(dashboards: dashboards, flags: flags, projectID: context.projectID)
   }
 
   private func loadToday() async {

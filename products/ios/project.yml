@@ -23,7 +23,7 @@ packages:
     path: Packages/PostHogKit
 
 targets:
-  PostHog:
+  PostHogApp:
     type: application
     platform: iOS
     sources:
@@ -40,6 +40,10 @@ targets:
       path: App/Entitlements/PostHog.entitlements
     settings:
       base:
+        PRODUCT_NAME: PostHog
+        # The posthog-ios SDK's library module is named PostHog; the app keeps
+        # its product name but compiles as a distinct module.
+        PRODUCT_MODULE_NAME: PostHogApp
         GENERATE_INFOPLIST_FILE: false
         INFOPLIST_FILE: App/Info.plist
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
@@ -78,13 +82,13 @@ targets:
     sources:
       - path: UITests
     dependencies:
-      - target: PostHog
+      - target: PostHogApp
 
 schemes:
   PostHog:
     build:
       targets:
-        PostHog: all
+        PostHogApp: all
     run:
       config: Debug
     test:

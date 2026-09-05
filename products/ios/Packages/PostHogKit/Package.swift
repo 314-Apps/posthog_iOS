@@ -11,7 +11,9 @@ let package = Package(
     .library(name: "PostHogFoundation", targets: ["PostHogFoundation"]),
   ],
   dependencies: [
-    .package(url: "https://github.com/pointfreeco/swift-snapshot-testing", from: "1.18.0")
+    .package(url: "https://github.com/pointfreeco/swift-snapshot-testing", from: "1.18.0"),
+    // Dogfooding our own SDK is table stakes for a first-party client.
+    .package(url: "https://github.com/PostHog/posthog-ios", from: "3.0.0"),
   ],
   targets: [
     // MARK: Core layers (imports flow strictly downward — see products/ios/AGENTS.md)
@@ -104,6 +106,7 @@ let package = Package(
         "FeatureInbox", "FeatureErrors", "FeatureLive", "FeatureReplay", "FeatureMax",
         "FeatureExperiments", "FeatureSurveys", "FeatureWeb", "FeaturePeople",
         "FeatureSQL", "FeatureActivity",
+        .product(name: "PostHog", package: "posthog-ios"),
       ]
     ),
 
