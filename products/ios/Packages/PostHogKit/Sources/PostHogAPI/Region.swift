@@ -12,6 +12,18 @@ public enum Region: Sendable, Equatable, Hashable, Identifiable {
   /// The picker's fixed options; self-hosted enters through its own flow.
   public static let cloudOptions: [Region] = [.us, .eu]
 
+  /// Maps a typed instance URL back onto a known region, so signing into cloud
+  /// with an API key keeps its livestream host and cache namespace instead of
+  /// being treated as a stranger.
+  public static func forHost(_ url: URL) -> Region {
+    switch url.host()?.lowercased() {
+    case "us.posthog.com", "app.posthog.com": .us
+    case "eu.posthog.com": .eu
+    case "localhost", "127.0.0.1": .dev
+    default: .selfHosted(host: url)
+    }
+  }
+
   public var id: String { storageKey }
 
   /// Stable key for caches and storage namespacing.

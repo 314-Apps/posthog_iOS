@@ -61,7 +61,7 @@ struct WelcomeView: View {
             .foregroundStyle(PHColor.danger)
             .multilineTextAlignment(.center)
         }
-        Button("Use a self-hosted instance") {
+        Button("Sign in with an API key") {
           showingSelfHosted = true
         }
         .font(.footnote.weight(.semibold))
@@ -72,8 +72,8 @@ struct WelcomeView: View {
       .padding(.bottom, 32)
     }
     .sheet(isPresented: $showingSelfHosted) {
-      SelfHostedSheet()
-        .presentationDetents([.medium])
+      APIKeySignInSheet(region: region)
+        .presentationDetents([.medium, .large])
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(

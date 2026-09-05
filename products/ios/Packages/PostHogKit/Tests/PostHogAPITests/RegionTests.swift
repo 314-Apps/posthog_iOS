@@ -28,6 +28,24 @@ import Testing
     }
   }
 
+  @Test(arguments: [
+    ("https://us.posthog.com", Region.us),
+    ("https://app.posthog.com", Region.us),
+    ("https://EU.posthog.com", Region.eu),
+    ("http://localhost:8010", Region.dev),
+  ])
+  func forHostNormalizesKnownClouds(raw: String, expected: Region) throws {
+    let url = try #require(URL(string: raw))
+    #expect(Region.forHost(url) == expected)
+  }
+
+  @Test func forHostKeepsUnknownInstances() throws {
+    let url = try #require(URL(string: "https://posthog.example.com"))
+    #expect(Region.forHost(url) == .selfHosted(host: url))
+    // A cloud sign-in keeps its livestream host; a stranger has none.
+    #expect(Region.forHost(url).livestreamBaseURL == nil)
+  }
+
   @Test func unknownRegionFailsLoudly() {
     #expect(throws: DecodingError.self) {
       _ = try JSONDecoder().decode(Region.self, from: Data("\"mars\"".utf8))

@@ -109,7 +109,7 @@ public final class SessionStore {
         accessToken: apiKey,
         refreshToken: "",
         expiresAt: .distantFuture,
-        region: .selfHosted(host: host),
+        region: .forHost(host),
         scopeVersion: AuthConfiguration.scopeVersion,
         scopedTeams: [],
         selectedProjectID: me.currentTeamID,

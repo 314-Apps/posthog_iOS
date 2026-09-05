@@ -20,6 +20,21 @@ final class SmokeUITests: XCTestCase {
   }
 
   @MainActor
+  func testAPIKeySignInSheetPrefillsSelectedRegion() {
+    let app = launch(scenario: "signedOut")
+    let entry = app.buttons["Sign in with an API key"]
+    XCTAssertTrue(entry.waitForExistence(timeout: 10))
+    entry.tap()
+
+    let host = app.textFields.firstMatch
+    XCTAssertTrue(host.waitForExistence(timeout: 5))
+    XCTAssertEqual(host.value as? String, "https://us.posthog.com")
+    XCTAssertTrue(app.secureTextFields.firstMatch.exists)
+    // Connect stays disabled until a key that looks like one is entered.
+    XCTAssertFalse(app.buttons["Connect"].isEnabled)
+  }
+
+  @MainActor
   func testSignedInHomeRendersPulse() {
     let app = launch(scenario: "signedIn")
     XCTAssertTrue(app.staticTexts["Unique users · today"].waitForExistence(timeout: 15))
