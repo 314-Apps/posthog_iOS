@@ -96,6 +96,12 @@ let package = Package(
       name: "FeatureActivity",
       dependencies: ["PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem"]
     ),
+    // Shared by every surface that renders a metric: who is behind this number,
+    // and where did it come from.
+    .target(
+      name: "FeatureDrilldown",
+      dependencies: ["PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem"]
+    ),
 
     // MARK: Shell
     .target(
@@ -105,7 +111,7 @@ let package = Package(
         "FeatureDashboards", "FeatureInsights", "FeatureFlags", "FeatureSettings",
         "FeatureInbox", "FeatureErrors", "FeatureLive", "FeatureReplay", "FeatureMax",
         "FeatureExperiments", "FeatureSurveys", "FeatureWeb", "FeaturePeople",
-        "FeatureSQL", "FeatureActivity",
+        "FeatureSQL", "FeatureActivity", "FeatureDrilldown",
         .product(name: "PostHog", package: "posthog-ios"),
       ]
     ),
@@ -140,6 +146,10 @@ let package = Package(
     .testTarget(name: "FeaturePeopleTests", dependencies: ["FeaturePeople", "PostHogTestSupport"]),
     .testTarget(name: "FeatureSQLTests", dependencies: ["FeatureSQL", "PostHogTestSupport"]),
     .testTarget(name: "FeatureActivityTests", dependencies: ["FeatureActivity", "PostHogTestSupport"]),
+    .testTarget(
+      name: "FeatureDrilldownTests",
+      dependencies: ["FeatureDrilldown", "PostHogTestSupport"]
+    ),
     .testTarget(
       name: "DesignSystemSnapshotTests",
       dependencies: [

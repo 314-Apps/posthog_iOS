@@ -114,5 +114,6 @@ schemes:
         - package: PostHogKit/FeaturePeopleTests
         - package: PostHogKit/FeatureSQLTests
         - package: PostHogKit/FeatureActivityTests
+        - package: PostHogKit/FeatureDrilldownTests
     archive:
       config: Release
