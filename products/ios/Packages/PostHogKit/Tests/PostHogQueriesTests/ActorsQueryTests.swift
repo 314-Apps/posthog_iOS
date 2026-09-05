@@ -89,7 +89,7 @@ private let funnelsSource = DataQuery(raw: [
     #expect(inner["source"]?["kind"]?.stringValue == "TrendsQuery")
   }
 
-  @Test func retentionCellSelectsByIntervalRatherThanDay() throws {
+  @Test func retentionCellSelectsTheCohortRowNotTheColumn() throws {
     let retention = DataQuery(raw: [
       "kind": "RetentionQuery",
       "retentionFilter": ["period": "Week", "totalIntervals": 8],
@@ -101,7 +101,9 @@ private let funnelsSource = DataQuery(raw: [
     let inner = try #require(query.raw["source"]?.objectValue)
     #expect(Set(inner.keys) == ["kind", "source", "interval"])
     #expect(inner["kind"]?.stringValue == "InsightActorsQuery")
-    #expect(inner["interval"]?.intValue == 3)
+    // The web app sends the cohort row index here, so 2 rather than 3. Sending
+    // the column index would return a different cohort's people.
+    #expect(inner["interval"]?.intValue == 2)
     #expect(inner["source"]?["kind"]?.stringValue == "RetentionQuery")
   }
 

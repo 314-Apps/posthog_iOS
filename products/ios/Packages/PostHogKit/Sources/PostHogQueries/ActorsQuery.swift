@@ -67,9 +67,13 @@ public enum ActorsQueryBuilder {
       if let day { object["day"] = .string(day) }
       if let series { object["series"] = .number(Double(series)) }
       if let compare { object["compare"] = .string(compare) }
-    case .retentionCell(_, let intervalIndex):
-      // Retention picks a cell by its interval index; it has no `day`.
-      object["interval"] = .number(Double(intervalIndex))
+    case .retentionCell(let cohortIndex, _):
+      // `interval` selects the cohort row, not the column: the web app clicks a
+      // whole row and sends its index here (see the web's retention modal
+      // logic). One request returns that cohort's people with every
+      // appearance, so the tapped column narrows the result on our side rather
+      // than in the query.
+      object["interval"] = .number(Double(cohortIndex))
     }
     return .object(object)
   }
