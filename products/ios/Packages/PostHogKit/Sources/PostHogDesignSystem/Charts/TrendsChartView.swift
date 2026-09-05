@@ -36,76 +36,119 @@ public struct TrendsChartView: View {
   private var previous: [SeriesResult] { series.filter(\.isPrevious) }
 
   public var body: some View {
-    Chart {
-      ForEach(Array(previous.enumerated()), id: \.offset) { _, one in
-        ForEach(Array(one.data.enumerated()), id: \.offset) { index, value in
-          LineMark(
-            x: .value("Bucket", index),
-            y: .value("Previous", value),
-            series: .value("Series", "previous-\(one.label)")
-          )
-          .foregroundStyle(PHColor.seriesPrevious)
-          .lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 5]))
-          .interpolationMethod(.catmullRom)
-        }
-      }
-      ForEach(Array(current.enumerated()), id: \.offset) { seriesIndex, one in
-        ForEach(Array(one.data.enumerated()), id: \.offset) { index, value in
-          switch style {
-          case .line:
-            LineMark(
-              x: .value("Bucket", index),
-              y: .value("Value", value),
-              series: .value("Series", one.label + String(seriesIndex))
-            )
-            .foregroundStyle(PHColor.series(at: seriesIndex))
-            .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round))
-            .interpolationMethod(.catmullRom)
-          case .area:
-            AreaMark(x: .value("Bucket", index), y: .value("Value", value))
-              .foregroundStyle(PHColor.series(at: seriesIndex).opacity(0.18))
-              .interpolationMethod(.catmullRom)
-            LineMark(
-              x: .value("Bucket", index),
-              y: .value("Value", value),
-              series: .value("Series", one.label + String(seriesIndex))
-            )
-            .foregroundStyle(PHColor.series(at: seriesIndex))
-            .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round))
-            .interpolationMethod(.catmullRom)
-          case .bar:
-            BarMark(x: .value("Bucket", index), y: .value("Value", value))
-              .foregroundStyle(PHColor.series(at: seriesIndex))
-              .cornerRadius(3)
-          }
-        }
-      }
-    }
-    .chartXAxis {
-      if showsAxes {
-        AxisMarks(values: .automatic(desiredCount: 4)) { value in
-          AxisGridLine().foregroundStyle(PHColor.divider)
-          AxisValueLabel {
-            if let index = value.as(Int.self), let label = bucketLabel(at: index) {
-              Text(label)
-                .font(.caption2)
-                .foregroundStyle(PHColor.textTertiary)
+    styledChart
+      .chartXAxis {
+        if showsAxes {
+          AxisMarks(values: .automatic(desiredCount: 4)) { value in
+            AxisGridLine().foregroundStyle(PHColor.divider)
+            AxisValueLabel {
+              if let index = value.as(Int.self), let label = bucketLabel(at: index) {
+                Text(label)
+                  .font(.caption2)
+                  .foregroundStyle(PHColor.textTertiary)
+              }
             }
           }
         }
       }
-    }
-    .chartYAxis {
-      if showsAxes {
-        AxisMarks(position: .leading, values: .automatic(desiredCount: 4)) { _ in
-          AxisGridLine().foregroundStyle(PHColor.divider)
-          AxisValueLabel()
-            .font(.caption2)
-            .foregroundStyle(PHColor.textTertiary)
+      .chartYAxis {
+        if showsAxes {
+          AxisMarks(position: .leading, values: .automatic(desiredCount: 4)) { _ in
+            AxisGridLine().foregroundStyle(PHColor.divider)
+            AxisValueLabel()
+              .font(.caption2)
+              .foregroundStyle(PHColor.textTertiary)
+          }
         }
       }
+      .accessibilityLabel(accessibilitySummary)
+  }
+
+  /// One `Chart` per style. Switching *inside* the chart-content builder would
+  /// need `_ConditionalContent`, whose `ChartContent` conformance the SDK gates
+  /// to a far newer iOS than this app deploys to; switching at the view level
+  /// does not.
+  @ViewBuilder
+  private var styledChart: some View {
+    switch style {
+    case .line:
+      Chart {
+        previousMarks
+        currentLineMarks
+      }
+    case .area:
+      Chart {
+        previousMarks
+        currentAreaMarks
+      }
+    case .bar:
+      Chart {
+        previousMarks
+        currentBarMarks
+      }
     }
-    .accessibilityLabel(accessibilitySummary)
+  }
+
+  @ChartContentBuilder
+  private var previousMarks: some ChartContent {
+    ForEach(Array(previous.enumerated()), id: \.offset) { _, one in
+      ForEach(Array(one.data.enumerated()), id: \.offset) { index, value in
+        LineMark(
+          x: .value("Bucket", index),
+          y: .value("Previous", value),
+          series: .value("Series", "previous-\(one.label)")
+        )
+        .foregroundStyle(PHColor.seriesPrevious)
+        .lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 5]))
+        .interpolationMethod(.catmullRom)
+      }
+    }
+  }
+
+  @ChartContentBuilder
+  private var currentLineMarks: some ChartContent {
+    ForEach(Array(current.enumerated()), id: \.offset) { seriesIndex, one in
+      ForEach(Array(one.data.enumerated()), id: \.offset) { index, value in
+        LineMark(
+          x: .value("Bucket", index),
+          y: .value("Value", value),
+          series: .value("Series", one.label + String(seriesIndex))
+        )
+        .foregroundStyle(PHColor.series(at: seriesIndex))
+        .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round))
+        .interpolationMethod(.catmullRom)
+      }
+    }
+  }
+
+  @ChartContentBuilder
+  private var currentAreaMarks: some ChartContent {
+    ForEach(Array(current.enumerated()), id: \.offset) { seriesIndex, one in
+      ForEach(Array(one.data.enumerated()), id: \.offset) { index, value in
+        AreaMark(x: .value("Bucket", index), y: .value("Value", value))
+          .foregroundStyle(PHColor.series(at: seriesIndex).opacity(0.18))
+          .interpolationMethod(.catmullRom)
+        LineMark(
+          x: .value("Bucket", index),
+          y: .value("Value", value),
+          series: .value("Series", one.label + String(seriesIndex))
+        )
+        .foregroundStyle(PHColor.series(at: seriesIndex))
+        .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round))
+        .interpolationMethod(.catmullRom)
+      }
+    }
+  }
+
+  @ChartContentBuilder
+  private var currentBarMarks: some ChartContent {
+    ForEach(Array(current.enumerated()), id: \.offset) { seriesIndex, one in
+      ForEach(Array(one.data.enumerated()), id: \.offset) { index, value in
+        BarMark(x: .value("Bucket", index), y: .value("Value", value))
+          .foregroundStyle(PHColor.series(at: seriesIndex))
+          .cornerRadius(3)
+      }
+    }
   }
 
   private func bucketLabel(at index: Int) -> String? {
