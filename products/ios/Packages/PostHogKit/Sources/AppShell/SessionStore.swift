@@ -131,6 +131,7 @@ public final class SessionStore {
     }
     await broker.clear()
     await cache.removeAll()
+    WidgetSnapshotStore.clear()
     availableProjects = []
     user = nil
     phase = .signedOut

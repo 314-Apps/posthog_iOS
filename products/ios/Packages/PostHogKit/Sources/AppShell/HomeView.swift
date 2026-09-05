@@ -13,10 +13,7 @@ struct HomeView: View {
   private let onOpenFlags: () -> Void
   private let onOpenSettings: () -> Void
   private let onOpenSwitcher: () -> Void
-  private let onOpenErrors: () -> Void
-  private let onOpenLive: () -> Void
-  private let onOpenReplay: () -> Void
-  private let onOpenWeb: (String) -> Void
+  private let onOpenProduct: (HomeProduct) -> Void
 
   init(
     context: ProjectContext,
@@ -25,10 +22,7 @@ struct HomeView: View {
     onOpenFlags: @escaping () -> Void,
     onOpenSettings: @escaping () -> Void,
     onOpenSwitcher: @escaping () -> Void,
-    onOpenErrors: @escaping () -> Void,
-    onOpenLive: @escaping () -> Void,
-    onOpenReplay: @escaping () -> Void,
-    onOpenWeb: @escaping (String) -> Void
+    onOpenProduct: @escaping (HomeProduct) -> Void
   ) {
     self._model = State(initialValue: HomeModel(context: context))
     self.projectName = projectName
@@ -36,10 +30,7 @@ struct HomeView: View {
     self.onOpenFlags = onOpenFlags
     self.onOpenSettings = onOpenSettings
     self.onOpenSwitcher = onOpenSwitcher
-    self.onOpenErrors = onOpenErrors
-    self.onOpenLive = onOpenLive
-    self.onOpenReplay = onOpenReplay
-    self.onOpenWeb = onOpenWeb
+    self.onOpenProduct = onOpenProduct
   }
 
   var body: some View {
@@ -80,7 +71,10 @@ struct HomeView: View {
         .accessibilityLabel("Settings")
       }
     }
-    .task { await model.load() }
+    .task {
+      model.widgetProjectName = projectName
+      await model.load()
+    }
     .refreshable { await model.load(forceRefresh: true) }
   }
 
@@ -166,10 +160,9 @@ struct HomeView: View {
 
   private var productsSection: some View {
     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: PHSpacing.sm + 2) {
-      productChip("Errors", systemImage: "ant", action: onOpenErrors)
-      productChip("Live", systemImage: "bolt", action: onOpenLive)
-      productChip("Replay", systemImage: "play.rectangle", action: onOpenReplay)
-      productChip("Persons", systemImage: "person.2") { onOpenWeb("/persons") }
+      ForEach(HomeProduct.allCases) { product in
+        productChip(product.title, systemImage: product.systemImage) { onOpenProduct(product) }
+      }
     }
   }
 
@@ -238,9 +231,78 @@ struct HomeView: View {
   }
 }
 
+/// Every product reachable from the Home grid. Native surfaces route in-app;
+/// web cases open the matching web page so nothing dead-ends.
+enum HomeProduct: String, CaseIterable, Identifiable {
+  case errors, live, replay, persons, web, experiments, surveys, sql, activity, annotations
+  case notebooks, heatmaps
+
+  var id: String { rawValue }
+
+  var title: String {
+    switch self {
+    case .errors: "Errors"
+    case .live: "Live"
+    case .replay: "Replay"
+    case .persons: "People"
+    case .web: "Web"
+    case .experiments: "Experiments"
+    case .surveys: "Surveys"
+    case .sql: "SQL"
+    case .activity: "Activity"
+    case .annotations: "Annotations"
+    case .notebooks: "Notebooks"
+    case .heatmaps: "Heatmaps"
+    }
+  }
+
+  var systemImage: String {
+    switch self {
+    case .errors: "ant"
+    case .live: "bolt"
+    case .replay: "play.rectangle"
+    case .persons: "person.2"
+    case .web: "globe"
+    case .experiments: "testtube.2"
+    case .surveys: "bubble.left.and.bubble.right"
+    case .sql: "terminal"
+    case .activity: "clock.arrow.circlepath"
+    case .annotations: "text.bubble"
+    case .notebooks: "book.closed"
+    case .heatmaps: "flame"
+    }
+  }
+
+  /// Native route, or nil for deliberate web surfaces.
+  var route: Route? {
+    switch self {
+    case .errors: .errorsList
+    case .live: .liveEvents
+    case .replay: .replayList
+    case .persons: .peopleList
+    case .web: .webAnalytics
+    case .experiments: .experimentsList
+    case .surveys: .surveysList
+    case .sql: .sqlRunner
+    case .activity: .activityFeed
+    case .annotations: .annotations
+    case .notebooks, .heatmaps: nil
+    }
+  }
+
+  var webPath: String? {
+    switch self {
+    case .notebooks: "/notebooks"
+    case .heatmaps: "/heatmaps"
+    default: nil
+    }
+  }
+}
+
 @MainActor
 @Observable
 final class HomeModel {
+  var widgetProjectName: String?
   private(set) var todaySeries: [SeriesResult]?
   private(set) var todayDelta: Double?
   private(set) var webOverview: [WebOverviewItem]?
@@ -278,6 +340,14 @@ final class HomeModel {
     let current = series.first { !$0.isPrevious }?.count ?? 0
     let previous = series.first(where: \.isPrevious)?.count ?? 0
     todayDelta = previous > 0 ? (current - previous) / previous : nil
+    WidgetSnapshotStore.write(
+      WidgetSnapshot(
+        projectName: widgetProjectName ?? "PostHog",
+        value: current,
+        deltaFraction: todayDelta,
+        updatedAt: .now
+      )
+    )
   }
 
   private func loadWebOverview() async {

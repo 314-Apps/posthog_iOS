@@ -32,9 +32,12 @@ targets:
     dependencies:
       - package: PostHogKit
         product: AppShell
+      - target: PostHogWidgets
     configFiles:
       Debug: Config/Debug.xcconfig
       Release: Config/Release.xcconfig
+    entitlements:
+      path: App/Entitlements/PostHog.entitlements
     settings:
       base:
         GENERATE_INFOPLIST_FILE: false
@@ -42,6 +45,32 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
         TARGETED_DEVICE_FAMILY: 1,2
+
+  PostHogWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Widgets/Sources
+    dependencies:
+      - package: PostHogKit
+        product: PostHogFoundation
+    entitlements:
+      path: App/Entitlements/PostHogWidgets.entitlements
+    configFiles:
+      Debug: Config/Shared.xcconfig
+      Release: Config/Shared.xcconfig
+    info:
+      path: Widgets/Info.plist
+      properties:
+        CFBundleDisplayName: PostHog widgets
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.posthog.ios.widgets
+        SKIP_INSTALL: true
 
   PostHogUITests:
     type: bundle.ui-testing

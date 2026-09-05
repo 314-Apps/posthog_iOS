@@ -4,19 +4,27 @@ import SwiftUI
 
 /// Account, instance, and sign-out. Reached from the profile button on Home —
 /// there is deliberately no Settings tab.
-public struct SettingsView: View {
+public struct SettingsView<BillingDestination: View>: View {
   private let email: String?
   private let regionName: String
   private let appVersion: String
+  private let billingDestination: () -> BillingDestination
   private let onSignOut: () -> Void
 
   @State private var confirmingSignOut = false
+  @AppStorage("tab.slot3") private var slot3 = "flags"
 
-  public init(email: String?, regionName: String, onSignOut: @escaping () -> Void) {
+  public init(
+    email: String?,
+    regionName: String,
+    @ViewBuilder billingDestination: @escaping () -> BillingDestination,
+    onSignOut: @escaping () -> Void
+  ) {
     self.email = email
     self.regionName = regionName
     self.appVersion =
       (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "dev"
+    self.billingDestination = billingDestination
     self.onSignOut = onSignOut
   }
 
@@ -25,6 +33,19 @@ public struct SettingsView: View {
       Section("Account") {
         LabeledContent("Email", value: email ?? "–")
         LabeledContent("Instance", value: regionName)
+        NavigationLink("Billing and usage") {
+          billingDestination()
+        }
+      }
+      Section {
+        Picker("Third tab", selection: $slot3) {
+          Text("Flags").tag("flags")
+          Text("Errors").tag("errors")
+          Text("Replay").tag("replay")
+          Text("Web analytics").tag("web")
+        }
+      } footer: {
+        Text("Choose which product sits in the tab bar's third slot.")
       }
       Section {
         Button(role: .destructive) {

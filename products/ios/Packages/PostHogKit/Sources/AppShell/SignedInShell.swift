@@ -1,12 +1,18 @@
+import FeatureActivity
 import FeatureDashboards
 import FeatureErrors
+import FeatureExperiments
 import FeatureFlags
 import FeatureInbox
 import FeatureInsights
 import FeatureLive
 import FeatureMax
+import FeaturePeople
 import FeatureReplay
+import FeatureSQL
 import FeatureSettings
+import FeatureSurveys
+import FeatureWeb
 import PostHogAPI
 import PostHogDesignSystem
 import PostHogQueries
@@ -16,11 +22,15 @@ import SwiftUI
 struct SignedInShell: View {
   @Environment(SessionStore.self) private var session
   @Environment(\.openURL) private var openURL
+  @Environment(\.scenePhase) private var scenePhase
   @State private var router = Router()
   @State private var showingSwitcher = false
   @State private var showingSettings = false
   @State private var showingMaxHistory = false
   @State private var unreadCount = 0
+  @AppStorage("tab.slot3") private var slot3 = PinnableTab.flags.rawValue
+
+  private var pinnedTab: PinnableTab { PinnableTab(rawValue: slot3) ?? .flags }
 
   let context: ProjectContext
 
@@ -35,10 +45,7 @@ struct SignedInShell: View {
           onOpenFlags: { router.selectedTab = .flags },
           onOpenSettings: { showingSettings = true },
           onOpenSwitcher: { showingSwitcher = true },
-          onOpenErrors: { router.pushOnSelectedTab(.errorsList) },
-          onOpenLive: { router.pushOnSelectedTab(.liveEvents) },
-          onOpenReplay: { router.pushOnSelectedTab(.replayList) },
-          onOpenWeb: { openWeb(path: $0) }
+          onOpenProduct: { open(product: $0) }
         )
         .navigationDestination(for: Route.self) { destination(for: $0) }
       }
@@ -53,10 +60,10 @@ struct SignedInShell: View {
       .tag(AppTab.dashboards)
 
       NavigationStack(path: $router.flagsPath) {
-        FlagsListView(context: context) { router.open(.flag(id: $0)) }
+        slot3Root
           .navigationDestination(for: Route.self) { destination(for: $0) }
       }
-      .tabItem { Label("Flags", systemImage: "flag") }
+      .tabItem { Label(pinnedTab.title, systemImage: pinnedTab.systemImage) }
       .tag(AppTab.flags)
 
       NavigationStack(path: $router.inboxPath) {
@@ -113,11 +120,13 @@ struct SignedInShell: View {
       NavigationStack {
         SettingsView(
           email: session.user?.email,
-          regionName: context.region.displayName
-        ) {
-          showingSettings = false
-          Task { await session.signOut() }
-        }
+          regionName: context.region.displayName,
+          billingDestination: { BillingView(context: context) },
+          onSignOut: {
+            showingSettings = false
+            Task { await session.signOut() }
+          }
+        )
         .toolbar {
           ToolbarItem(placement: .topBarTrailing) {
             Button("Done") { showingSettings = false }
@@ -129,9 +138,43 @@ struct SignedInShell: View {
       _ = router.handle(deepLink: url, currentProjectID: context.projectID)
     }
     .task { await session.loadProjects() }
+    .onAppear { consumeHandoff() }
+    .onChange(of: scenePhase) { _, phase in
+      if phase == .active { consumeHandoff() }
+    }
+  }
+
+  private func consumeHandoff() {
+    if let tab = TabHandoff.consume() {
+      router.selectedTab = tab
+    }
   }
 
   @ViewBuilder
+  private var slot3Root: some View {
+    switch pinnedTab {
+    case .flags:
+      FlagsListView(context: context) { router.open(.flag(id: $0)) }
+    case .errors:
+      ErrorsListView(context: context) { router.pushOnSelectedTab(.errorIssue(id: $0)) }
+    case .replay:
+      ReplayListView(context: context) { router.pushOnSelectedTab(.replay(sessionID: $0)) }
+    case .web:
+      WebAnalyticsView(context: context)
+    }
+  }
+
+  private func open(product: HomeProduct) {
+    if let route = product.route {
+      router.pushOnSelectedTab(route)
+    } else if let path = product.webPath {
+      openWeb(path: path)
+    }
+  }
+
+  @ViewBuilder
+  // A route-to-screen mapping switch grows with every surface by design.
+  // swiftlint:disable:next cyclomatic_complexity
   private func destination(for route: Route) -> some View {
     switch route {
     case .dashboard(let id):
@@ -150,6 +193,28 @@ struct SignedInShell: View {
       ReplayListView(context: context) { router.pushOnSelectedTab(.replay(sessionID: $0)) }
     case .replay(let sessionID):
       ReplayDetailView(context: context, sessionID: sessionID) { openWeb(path: $0) }
+    case .experimentsList:
+      ExperimentsListView(context: context) { router.pushOnSelectedTab(.experiment(id: $0)) }
+    case .experiment(let id):
+      ExperimentDetailView(context: context, experimentID: id) { openWeb(path: $0) }
+    case .surveysList:
+      SurveysListView(context: context) { router.pushOnSelectedTab(.survey(id: $0)) }
+    case .survey(let id):
+      SurveyDetailView(context: context, surveyID: id)
+    case .webAnalytics:
+      WebAnalyticsView(context: context)
+    case .peopleList:
+      PeopleView(context: context) { router.pushOnSelectedTab(.person(id: $0)) }
+    case .person(let id):
+      PersonDetailView(context: context, personID: id)
+    case .sqlRunner:
+      SQLRunnerView(context: context)
+    case .activityFeed:
+      ActivityFeedView(context: context)
+    case .annotations:
+      AnnotationsView(context: context)
+    case .billing:
+      BillingView(context: context)
     }
   }
 

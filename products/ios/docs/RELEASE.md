@@ -22,6 +22,10 @@
 - Build number is monotonically increasing per workflow run and unique across re-run attempts, so a failed release re-run never collides with an already-uploaded build.
 - `manageAppVersionAndBuildNumber` is off — we own the numbers.
 
+## Capabilities to register (ops, before archives sign)
+
+Cloud signing (`-allowProvisioningUpdates`) can only mint profiles for capabilities that exist on the identifiers in App Store Connect: register the `group.com.posthog.ios` App Group on both `com.posthog.ios` and `com.posthog.ios.widgets`, and enable Push Notifications on `com.posthog.ios`. Simulator builds don't need any of this.
+
 ## App Review
 
 The app requires a PostHog account, so every submission carries demo credentials in the review notes (dedicated demo org on US Cloud with seeded data). Keep that project's data fresh before promoting; the "Try the demo" path on the welcome screen uses the same account.

@@ -6,7 +6,9 @@ let package = Package(
   defaultLocalization: "en",
   platforms: [.iOS(.v17)],
   products: [
-    .library(name: "AppShell", targets: ["AppShell"])
+    .library(name: "AppShell", targets: ["AppShell"]),
+    // Consumed by the widget extension only — keep this surface tiny.
+    .library(name: "PostHogFoundation", targets: ["PostHogFoundation"]),
   ],
   dependencies: [
     .package(url: "https://github.com/pointfreeco/swift-snapshot-testing", from: "1.18.0")

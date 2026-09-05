@@ -22,6 +22,17 @@ public enum Route: Hashable, Sendable {
   case liveEvents
   case replayList
   case replay(sessionID: String)
+  case experimentsList
+  case experiment(id: Int)
+  case surveysList
+  case survey(id: String)
+  case webAnalytics
+  case peopleList
+  case person(id: String)
+  case sqlRunner
+  case activityFeed
+  case annotations
+  case billing
 }
 
 /// One router: the selected tab plus a NavigationStack path per tab.
@@ -45,7 +56,7 @@ public final class Router {
     case .flag:
       selectedTab = .flags
       flagsPath.append(route)
-    case .errorsList, .errorIssue, .liveEvents, .replayList, .replay:
+    default:
       pushOnSelectedTab(route)
     }
   }
@@ -63,6 +74,10 @@ public final class Router {
 
   public func handle(deepLink url: URL, currentProjectID: Int?) -> DeepLink? {
     guard let link = DeepLinkParser.parse(url) else { return nil }
+    if let tab = link.tab {
+      selectedTab = tab
+      return nil
+    }
     if let route = link.route, link.projectID == nil || link.projectID == currentProjectID {
       open(route)
       return nil
@@ -76,6 +91,14 @@ public struct DeepLink: Hashable, Sendable {
   public let region: Region?
   public let projectID: Int?
   public let route: Route?
+  public var tab: AppTab?
+
+  public init(region: Region?, projectID: Int?, route: Route?, tab: AppTab? = nil) {
+    self.region = region
+    self.projectID = projectID
+    self.route = route
+    self.tab = tab
+  }
 }
 
 /// Pure parser for `posthog-ios://` URLs (and, later, universal links).
@@ -94,6 +117,10 @@ public enum DeepLinkParser {
 
     guard let head = parts.first else {
       return DeepLink(region: nil, projectID: projectID, route: nil)
+    }
+    // Tab-level links (Siri shortcuts, widgets): posthog-ios://max etc.
+    if parts.count == 1, projectID == nil, let tab = AppTab(rawValue: head) {
+      return DeepLink(region: nil, projectID: nil, route: nil, tab: tab)
     }
     let idPart = parts.count >= 2 ? Int(parts[1]) : nil
     let route: Route? =

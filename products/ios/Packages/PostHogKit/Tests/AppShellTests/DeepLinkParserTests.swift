@@ -22,6 +22,15 @@ import Testing
     #expect(link?.route == .dashboard(id: 45))
   }
 
+  @Test func parsesTabLevelLinks() {
+    let max = DeepLinkParser.parse(URL(string: "posthog-ios://max")!)
+    #expect(max?.tab == .max)
+    #expect(max?.route == nil)
+
+    let home = DeepLinkParser.parse(URL(string: "posthog-ios://home")!)
+    #expect(home?.tab == .home)
+  }
+
   @Test func rejectsForeignSchemesAndJunk() {
     #expect(DeepLinkParser.parse(URL(string: "posthog://dashboard/45")!) == nil)
     #expect(DeepLinkParser.parse(URL(string: "https://example.com/dashboard/45")!) == nil)
