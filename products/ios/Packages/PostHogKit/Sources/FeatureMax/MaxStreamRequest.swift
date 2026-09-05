@@ -20,6 +20,10 @@ public struct MaxStreamRequest: Sendable, Equatable {
     self.headers = [
       "Authorization": "Bearer \(accessToken)",
       "Content-Type": "application/json",
+      // The endpoint streams events but still offers only a JSON renderer, so
+      // asking for event-stream alone is refused before the view ever runs.
+      // Naming both gets through content negotiation either way.
+      "Accept": "text/event-stream, application/json",
     ]
     let payload: [String: String] = [
       "conversation": conversationID.uuidString.lowercased(),

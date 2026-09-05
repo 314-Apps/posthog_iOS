@@ -21,6 +21,9 @@ import Testing
       request.headers == [
         "Authorization": "Bearer pha_token",
         "Content-Type": "application/json",
+        // Dropping application/json here makes the server refuse the stream
+        // with a 406 before the view runs.
+        "Accept": "text/event-stream, application/json",
       ])
 
     let json = try JSONSerialization.jsonObject(with: request.body) as? [String: String]
