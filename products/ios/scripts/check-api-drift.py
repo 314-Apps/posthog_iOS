@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: T201 allow print statements
 """Stackless CI check that the Swift API surface matches the committed lock.
 
 Runs without a dev stack:
@@ -11,9 +12,9 @@ Runs without a dev stack:
 
 from __future__ import annotations
 
-import json
 import re
 import sys
+import json
 from pathlib import Path
 
 IOS_ROOT = Path(__file__).resolve().parent.parent
@@ -52,10 +53,7 @@ def main() -> None:
             continue
         for literal in PATH_LITERAL.findall(file.read_text()):
             if normalize(literal) not in allowed:
-                errors.append(
-                    f"{file.relative_to(IOS_ROOT)}: path {literal!r} is not in "
-                    "endpoint-allowlist.json"
-                )
+                errors.append(f"{file.relative_to(IOS_ROOT)}: path {literal!r} is not in endpoint-allowlist.json")
 
     # The lock adds spec verification on top once `make api-lock` has run
     # against a live stack; until then the allowlist check above still holds.
@@ -64,9 +62,7 @@ def main() -> None:
         lock_paths = {normalize(p) for p in lock["openapi"]["paths"]}
         for path in allowlist:
             if normalize(path) not in lock_paths:
-                errors.append(
-                    f"allowlisted path {path} not in api-lock.json — run `make api-lock`"
-                )
+                errors.append(f"allowlisted path {path} not in api-lock.json — run `make api-lock`")
     else:
         print("note: openapi/api-lock.json not generated yet (needs a dev stack)")
 

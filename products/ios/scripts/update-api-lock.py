@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: T201 allow print statements
 """Refresh openapi/api-lock.json from the repo's generated OpenAPI spec.
 
 Needs a running dev stack: builds frontend/tmp/openapi.json via `hogli
@@ -11,10 +12,10 @@ api-lock.json that CI can diff without a stack.
 
 from __future__ import annotations
 
-import json
-import subprocess
 import sys
+import json
 import time
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -35,20 +36,12 @@ def fail(message: str) -> None:
 
 
 def ensure_openapi_spec() -> dict[str, Any]:
-    stale = (
-        not OPENAPI_JSON.exists()
-        or time.time() - OPENAPI_JSON.stat().st_mtime > FRESHNESS_SECONDS
-    )
+    stale = not OPENAPI_JSON.exists() or time.time() - OPENAPI_JSON.stat().st_mtime > FRESHNESS_SECONDS
     if stale:
         print("building OpenAPI schema (needs the dev stack running) ...")
-        result = subprocess.run(
-            ["hogli", "build:openapi-schema"], cwd=REPO_ROOT, check=False
-        )
+        result = subprocess.run(["hogli", "build:openapi-schema"], cwd=REPO_ROOT, check=False)
         if result.returncode != 0 or not OPENAPI_JSON.exists():
-            fail(
-                "could not build frontend/tmp/openapi.json — is the dev stack up? "
-                "(`hogli start`)"
-            )
+            fail("could not build frontend/tmp/openapi.json — is the dev stack up? (`hogli start`)")
     with OPENAPI_JSON.open() as f:
         return json.load(f)
 
@@ -67,7 +60,7 @@ def collect_refs(node: Any, refs: set[str]) -> None:
 
 def schema_name(ref: str) -> str | None:
     prefix = "#/components/schemas/"
-    return ref[len(prefix):] if ref.startswith(prefix) else None
+    return ref[len(prefix) :] if ref.startswith(prefix) else None
 
 
 def filter_openapi(spec: dict[str, Any], allowed_paths: list[str]) -> dict[str, Any]:
@@ -80,10 +73,7 @@ def filter_openapi(spec: dict[str, Any], allowed_paths: list[str]) -> dict[str, 
         else:
             missing.append(path)
     if missing:
-        fail(
-            "allowlisted paths missing from the spec (renamed or removed "
-            f"upstream?): {missing}"
-        )
+        fail(f"allowlisted paths missing from the spec (renamed or removed upstream?): {missing}")
 
     schemas: dict[str, Any] = spec.get("components", {}).get("schemas", {})
     needed: set[str] = set()
@@ -105,9 +95,7 @@ def filter_openapi(spec: dict[str, Any], allowed_paths: list[str]) -> dict[str, 
         "openapi": spec.get("openapi"),
         "info": {"title": "PostHog API (iOS allowlisted subset)"},
         "paths": picked_paths,
-        "components": {
-            "schemas": {name: schemas[name] for name in sorted(needed)}
-        },
+        "components": {"schemas": {name: schemas[name] for name in sorted(needed)}},
     }
 
 
@@ -135,7 +123,7 @@ def filter_query_schema(allowed_kinds: list[str]) -> dict[str, Any]:
             for ref in refs:
                 prefix = "#/definitions/"
                 if ref.startswith(prefix):
-                    frontier.add(ref[len(prefix):])
+                    frontier.add(ref[len(prefix) :])
 
     return {name: definitions[name] for name in sorted(needed)}
 

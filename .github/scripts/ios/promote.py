@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: T201 allow print statements
 """Promote a TestFlight build to App Store review.
 
 Finds the newest valid build for the given marketing version, ensures an App
@@ -10,9 +11,9 @@ Environment: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (PEM), BUNDLE_ID, VERSION.
 
 from __future__ import annotations
 
-import json
 import os
 import sys
+import json
 import time
 import urllib.error
 import urllib.request
@@ -98,9 +99,7 @@ def main() -> None:
                 "data": {
                     "type": "appStoreVersions",
                     "attributes": {"platform": "IOS", "versionString": version},
-                    "relationships": {
-                        "app": {"data": {"type": "apps", "id": app_id}}
-                    },
+                    "relationships": {"app": {"data": {"type": "apps", "id": app_id}}},
                 }
             },
         )
@@ -114,9 +113,7 @@ def main() -> None:
     )
     print("build attached")
 
-    phased = request(
-        "GET", f"/v1/appStoreVersions/{version_id}/appStoreVersionPhasedRelease"
-    ).get("data")
+    phased = request("GET", f"/v1/appStoreVersions/{version_id}/appStoreVersionPhasedRelease").get("data")
     if not phased:
         request(
             "POST",
@@ -125,11 +122,7 @@ def main() -> None:
                 "data": {
                     "type": "appStoreVersionPhasedReleases",
                     "attributes": {"phasedReleaseState": "INACTIVE"},
-                    "relationships": {
-                        "appStoreVersion": {
-                            "data": {"type": "appStoreVersions", "id": version_id}
-                        }
-                    },
+                    "relationships": {"appStoreVersion": {"data": {"type": "appStoreVersions", "id": version_id}}},
                 }
             },
         )
@@ -154,12 +147,8 @@ def main() -> None:
             "data": {
                 "type": "reviewSubmissionItems",
                 "relationships": {
-                    "reviewSubmission": {
-                        "data": {"type": "reviewSubmissions", "id": submission_id}
-                    },
-                    "appStoreVersion": {
-                        "data": {"type": "appStoreVersions", "id": version_id}
-                    },
+                    "reviewSubmission": {"data": {"type": "reviewSubmissions", "id": submission_id}},
+                    "appStoreVersion": {"data": {"type": "appStoreVersions", "id": version_id}},
                 },
             }
         },
