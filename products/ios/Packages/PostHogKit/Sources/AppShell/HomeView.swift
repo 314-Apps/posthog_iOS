@@ -8,6 +8,7 @@ import SwiftUI
 /// refreshes in the background; each taps through to a deeper surface.
 struct HomeView: View {
   @State private var model: HomeModel
+  private let projectName: String?
   private let onOpenDashboard: (Int) -> Void
   private let onOpenFlags: () -> Void
   private let onOpenSettings: () -> Void
@@ -15,12 +16,14 @@ struct HomeView: View {
 
   init(
     context: ProjectContext,
+    projectName: String?,
     onOpenDashboard: @escaping (Int) -> Void,
     onOpenFlags: @escaping () -> Void,
     onOpenSettings: @escaping () -> Void,
     onOpenSwitcher: @escaping () -> Void
   ) {
     self._model = State(initialValue: HomeModel(context: context))
+    self.projectName = projectName
     self.onOpenDashboard = onOpenDashboard
     self.onOpenFlags = onOpenFlags
     self.onOpenSettings = onOpenSettings
@@ -46,7 +49,7 @@ struct HomeView: View {
       ToolbarItem(placement: .topBarLeading) {
         Button(action: onOpenSwitcher) {
           HStack(spacing: 6) {
-            Text(model.projectName ?? "Project")
+            Text(projectName ?? "Project")
               .font(.subheadline.weight(.bold))
               .foregroundStyle(PHColor.textPrimary)
             Image(systemName: "chevron.down")
@@ -85,7 +88,7 @@ struct HomeView: View {
               .phMetricStyle()
               .foregroundStyle(PHColor.textPrimary)
               .contentTransition(.numericText())
-            TrendsChartView(series: series.filter { !$0.isPrevious }, style: .bar)
+            TrendsChartView(series: series.filter { !$0.isPrevious }, style: .bar, showsAxes: false)
               .frame(height: 48)
           }
         } else {
@@ -191,7 +194,6 @@ struct HomeView: View {
 @MainActor
 @Observable
 final class HomeModel {
-  private(set) var projectName: String?
   private(set) var todaySeries: [SeriesResult]?
   private(set) var todayDelta: Double?
   private(set) var webOverview: [WebOverviewItem]?

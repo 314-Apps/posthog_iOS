@@ -30,16 +30,19 @@ public final class SessionStore {
   private let broker: TokenBroker
   private let authService: AuthService
   private let cache: DiskCache
+  private let transport: HTTPTransport
   private var eventsTask: Task<Void, Never>?
 
   public init(
     storage: SessionStorage,
     authService: AuthService? = nil,
-    cache: DiskCache = DiskCache()
+    cache: DiskCache = DiskCache(),
+    transport: HTTPTransport = URLSessionTransport()
   ) {
-    self.broker = TokenBroker(storage: storage)
+    self.broker = TokenBroker(storage: storage, transport: transport)
     self.authService = authService ?? AuthService()
     self.cache = cache
+    self.transport = transport
     self.eventsTask = Task { [weak self, broker] in
       for await event in broker.authEvents where event == .sessionInvalidated {
         self?.handleInvalidatedSession()
@@ -143,7 +146,7 @@ public final class SessionStore {
   }
 
   private func makeClient(region: Region) -> APIClient {
-    APIClient(baseURL: region.apiBaseURL, tokens: broker)
+    APIClient(baseURL: region.apiBaseURL, transport: transport, tokens: broker)
   }
 
   private func handleInvalidatedSession() {

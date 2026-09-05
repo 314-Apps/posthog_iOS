@@ -16,16 +16,20 @@ public struct AppDependencies {
   }
 
   public static func live(launchConfiguration: LaunchConfiguration) -> AppDependencies {
-    let storage: SessionStorage =
-      switch launchConfiguration {
-      case .production:
-        KeychainSessionStore()
-      case .uiTest:
-        InMemorySessionStore()
+    #if DEBUG
+      if case .uiTest(let scenario) = launchConfiguration {
+        let storage = InMemorySessionStore(
+          session: scenario == "signedIn" ? .uiTestFixture : nil
+        )
+        return AppDependencies(
+          launchConfiguration: launchConfiguration,
+          session: SessionStore(storage: storage, transport: FixtureTransport())
+        )
       }
+    #endif
     return AppDependencies(
       launchConfiguration: launchConfiguration,
-      session: SessionStore(storage: storage)
+      session: SessionStore(storage: KeychainSessionStore())
     )
   }
 }

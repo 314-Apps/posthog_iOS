@@ -24,10 +24,12 @@ public struct TrendsChartView: View {
 
   private let series: [SeriesResult]
   private let style: Style
+  private let showsAxes: Bool
 
-  public init(series: [SeriesResult], style: Style = .line) {
+  public init(series: [SeriesResult], style: Style = .line, showsAxes: Bool = true) {
     self.series = series
     self.style = style
+    self.showsAxes = showsAxes
   }
 
   private var current: [SeriesResult] { series.filter { !$0.isPrevious } }
@@ -80,23 +82,27 @@ public struct TrendsChartView: View {
       }
     }
     .chartXAxis {
-      AxisMarks(values: .automatic(desiredCount: 4)) { value in
-        AxisGridLine().foregroundStyle(PHColor.divider)
-        AxisValueLabel {
-          if let index = value.as(Int.self), let label = bucketLabel(at: index) {
-            Text(label)
-              .font(.caption2)
-              .foregroundStyle(PHColor.textTertiary)
+      if showsAxes {
+        AxisMarks(values: .automatic(desiredCount: 4)) { value in
+          AxisGridLine().foregroundStyle(PHColor.divider)
+          AxisValueLabel {
+            if let index = value.as(Int.self), let label = bucketLabel(at: index) {
+              Text(label)
+                .font(.caption2)
+                .foregroundStyle(PHColor.textTertiary)
+            }
           }
         }
       }
     }
     .chartYAxis {
-      AxisMarks(position: .leading, values: .automatic(desiredCount: 4)) { _ in
-        AxisGridLine().foregroundStyle(PHColor.divider)
-        AxisValueLabel()
-          .font(.caption2)
-          .foregroundStyle(PHColor.textTertiary)
+      if showsAxes {
+        AxisMarks(position: .leading, values: .automatic(desiredCount: 4)) { _ in
+          AxisGridLine().foregroundStyle(PHColor.divider)
+          AxisValueLabel()
+            .font(.caption2)
+            .foregroundStyle(PHColor.textTertiary)
+        }
       }
     }
     .accessibilityLabel(accessibilitySummary)

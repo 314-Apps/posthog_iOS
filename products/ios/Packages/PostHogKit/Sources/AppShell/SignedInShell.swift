@@ -22,6 +22,7 @@ struct SignedInShell: View {
       NavigationStack(path: $router.homePath) {
         HomeView(
           context: context,
+          projectName: session.availableProjects.first(where: { $0.id == context.projectID })?.name,
           onOpenDashboard: { router.open(.dashboard(id: $0)) },
           onOpenFlags: { router.selectedTab = .flags },
           onOpenSettings: { showingSettings = true },
@@ -75,6 +76,7 @@ struct SignedInShell: View {
     .onOpenURL { url in
       _ = router.handle(deepLink: url, currentProjectID: context.projectID)
     }
+    .task { await session.loadProjects() }
   }
 
   @ViewBuilder
