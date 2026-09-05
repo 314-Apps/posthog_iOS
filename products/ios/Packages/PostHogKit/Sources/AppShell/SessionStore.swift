@@ -84,6 +84,8 @@ public final class SessionStore {
   }
 
   public func signOut() async {
+    PushRegistrar.shared.unregister()
+    PushRegistrar.shared.configure(client: nil)
     if let session = await broker.currentSession {
       await authService.revoke(session: session)
     }
@@ -130,7 +132,9 @@ public final class SessionStore {
   private func adopt(_ session: StoredSession) {
     let resolved = session.resolvingSelectedProject()
     if let projectID = resolved.selectedProjectID {
-      phase = .signedIn(makeContext(session: resolved, projectID: projectID))
+      let context = makeContext(session: resolved, projectID: projectID)
+      PushRegistrar.shared.configure(client: context.client)
+      phase = .signedIn(context)
     } else {
       phase = .needsProject(resolved)
     }

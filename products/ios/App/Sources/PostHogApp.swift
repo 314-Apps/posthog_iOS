@@ -3,6 +3,8 @@ import SwiftUI
 
 @main
 struct PostHogApp: App {
+  @UIApplicationDelegateAdaptor(PushAppDelegate.self) private var pushDelegate
+
   private let dependencies: AppDependencies
 
   init() {
