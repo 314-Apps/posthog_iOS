@@ -5,9 +5,13 @@ import SwiftUI
 /// The BoldNumber display: one hero value, optional comparison delta.
 public struct BigNumberView: View {
   private let series: [SeriesResult]
+  private let onSelect: (() -> Void)?
 
-  public init(series: [SeriesResult]) {
+  @State private var selectionCount = 0
+
+  public init(series: [SeriesResult], onSelect: (() -> Void)? = nil) {
     self.series = series
+    self.onSelect = onSelect
   }
 
   private var currentValue: Double? {
@@ -25,6 +29,25 @@ public struct BigNumberView: View {
   }
 
   public var body: some View {
+    if let onSelect {
+      Button {
+        selectionCount += 1
+        onSelect()
+      } label: {
+        value
+          .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+          .contentShape(Rectangle())
+      }
+      .buttonStyle(PHPressableStyle())
+      .sensoryFeedback(.selection, trigger: selectionCount)
+      .accessibilityLabel(accessibilityLabel)
+    } else {
+      value
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+  }
+
+  private var value: some View {
     VStack(alignment: .leading, spacing: PHSpacing.sm) {
       if let currentValue {
         Text(MetricFormat.full(currentValue))
@@ -43,6 +66,12 @@ public struct BigNumberView: View {
           .foregroundStyle(PHColor.textTertiary)
       }
     }
-    .frame(maxWidth: .infinity, alignment: .leading)
+  }
+
+  private var accessibilityLabel: String {
+    guard let currentValue else { return "No value yet" }
+    let label = series.first { !$0.isPrevious }?.label ?? ""
+    let name = label.isEmpty ? "Total" : label
+    return "\(name), \(MetricFormat.full(currentValue)). Double tap to see the people."
   }
 }

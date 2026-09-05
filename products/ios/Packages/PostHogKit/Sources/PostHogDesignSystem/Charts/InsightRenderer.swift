@@ -8,11 +8,18 @@ public struct InsightRenderer: View {
   private let query: DataQuery
   private let result: QueryResult
   private let onOpenInPostHog: (() -> Void)?
+  private let onDrill: ((ActorsDrill) -> Void)?
 
-  public init(query: DataQuery, result: QueryResult, onOpenInPostHog: (() -> Void)? = nil) {
+  public init(
+    query: DataQuery,
+    result: QueryResult,
+    onOpenInPostHog: (() -> Void)? = nil,
+    onDrill: ((ActorsDrill) -> Void)? = nil
+  ) {
     self.query = query
     self.result = result
     self.onOpenInPostHog = onOpenInPostHog
+    self.onDrill = onDrill
   }
 
   private var display: String? {
@@ -24,21 +31,57 @@ public struct InsightRenderer: View {
     switch result {
     case .series(let series):
       if display == "BoldNumber" {
-        BigNumberView(series: series)
+        BigNumberView(series: series, onSelect: aggregateHandler)
       } else {
-        TrendsChartView(series: series, style: TrendsChartView.Style(display: display))
-          .frame(minHeight: 160)
+        TrendsChartView(
+          series: series,
+          style: TrendsChartView.Style(display: display),
+          onSelectPoint: trendsPointHandler(series: series)
+        )
+        .frame(minHeight: 160)
       }
     case .funnel(let steps):
-      FunnelChartView(steps: steps)
+      FunnelChartView(steps: steps, onSelectStep: funnelStepHandler)
     case .retention(let rows):
-      RetentionGridView(rows: rows)
+      RetentionGridView(rows: rows, onSelectCell: retentionCellHandler)
     case .webOverview(let items):
       WebOverviewGridView(items: items)
     case .table(let table):
       TableResultView(table: table)
     case .unknown:
       UnsupportedInsightTile(kind: query.renderSource.kind, onOpen: onOpenInPostHog)
+    }
+  }
+
+  private var aggregateHandler: (() -> Void)? {
+    guard let onDrill else { return nil }
+    return { onDrill(.aggregate) }
+  }
+
+  /// The comparison series is drawn but not drillable, so a point always
+  /// resolves to the current period.
+  private func trendsPointHandler(series: [SeriesResult]) -> ((Int, Int) -> Void)? {
+    guard let onDrill else { return nil }
+    return { bucketIndex, seriesIndex in
+      onDrill(
+        .trendsPoint(
+          day: TrendsBucketResolver.day(for: bucketIndex, in: series),
+          series: seriesIndex,
+          compare: "current"
+        )
+      )
+    }
+  }
+
+  private var funnelStepHandler: ((Int) -> Void)? {
+    guard let onDrill else { return nil }
+    return { order in onDrill(.funnelStep(order: order)) }
+  }
+
+  private var retentionCellHandler: ((Int, Int) -> Void)? {
+    guard let onDrill else { return nil }
+    return { cohortIndex, intervalIndex in
+      onDrill(.retentionCell(cohortIndex: cohortIndex, intervalIndex: intervalIndex))
     }
   }
 }

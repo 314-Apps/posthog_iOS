@@ -75,6 +75,21 @@ struct DesignSystemSnapshotTests {
     assert(TrendsChartView(series: trendsSeries, style: .bar), named: "trends-bar")
   }
 
+  /// The selection seed stands in for the drag gesture, which a headless render
+  /// cannot deliver.
+  @Test func trendsLineChartWithSelectedPoint() {
+    assert(
+      TrendsChartView(
+        series: trendsSeries,
+        style: .line,
+        showsAxes: true,
+        initialSelection: .init(bucket: 5, series: 0),
+        onSelectPoint: { _, _ in }
+      ),
+      named: "trends-line-selected"
+    )
+  }
+
   @Test func bigNumber() {
     assert(BigNumberView(series: trendsSeries), named: "big-number", height: 130)
   }
