@@ -4,6 +4,8 @@ import FeatureFlags
 import FeatureInbox
 import FeatureInsights
 import FeatureLive
+import FeatureMax
+import FeatureReplay
 import FeatureSettings
 import PostHogAPI
 import PostHogDesignSystem
@@ -17,6 +19,7 @@ struct SignedInShell: View {
   @State private var router = Router()
   @State private var showingSwitcher = false
   @State private var showingSettings = false
+  @State private var showingMaxHistory = false
   @State private var unreadCount = 0
 
   let context: ProjectContext
@@ -34,6 +37,7 @@ struct SignedInShell: View {
           onOpenSwitcher: { showingSwitcher = true },
           onOpenErrors: { router.pushOnSelectedTab(.errorsList) },
           onOpenLive: { router.pushOnSelectedTab(.liveEvents) },
+          onOpenReplay: { router.pushOnSelectedTab(.replayList) },
           onOpenWeb: { openWeb(path: $0) }
         )
         .navigationDestination(for: Route.self) { destination(for: $0) }
@@ -68,8 +72,31 @@ struct SignedInShell: View {
       .tabItem { Label("Inbox", systemImage: "bell") }
       .badge(unreadCount)
       .tag(AppTab.inbox)
+
+      NavigationStack(path: $router.maxPath) {
+        MaxChatView(context: context, tokenProvider: session.tokenProvider)
+          .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+              Button {
+                showingMaxHistory = true
+              } label: {
+                Image(systemName: "clock.arrow.circlepath")
+              }
+              .accessibilityLabel("Conversation history")
+            }
+          }
+          .navigationDestination(for: Route.self) { destination(for: $0) }
+      }
+      .tabItem { Label("Max", systemImage: "sparkles") }
+      .tag(AppTab.max)
     }
     .tint(PHColor.accent)
+    .sheet(isPresented: $showingMaxHistory) {
+      NavigationStack {
+        MaxHistoryView(context: context) { showingMaxHistory = false }
+      }
+      .presentationDetents([.medium, .large])
+    }
     .task {
       unreadCount = await InboxBadge.unreadCount(context: context)
     }
@@ -119,6 +146,10 @@ struct SignedInShell: View {
       ErrorIssueDetailView(context: context, issueID: id)
     case .liveEvents:
       LiveEventsView(context: context)
+    case .replayList:
+      ReplayListView(context: context) { router.pushOnSelectedTab(.replay(sessionID: $0)) }
+    case .replay(let sessionID):
+      ReplayDetailView(context: context, sessionID: sessionID) { openWeb(path: $0) }
     }
   }
 

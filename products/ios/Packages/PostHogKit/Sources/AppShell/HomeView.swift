@@ -15,6 +15,7 @@ struct HomeView: View {
   private let onOpenSwitcher: () -> Void
   private let onOpenErrors: () -> Void
   private let onOpenLive: () -> Void
+  private let onOpenReplay: () -> Void
   private let onOpenWeb: (String) -> Void
 
   init(
@@ -26,6 +27,7 @@ struct HomeView: View {
     onOpenSwitcher: @escaping () -> Void,
     onOpenErrors: @escaping () -> Void,
     onOpenLive: @escaping () -> Void,
+    onOpenReplay: @escaping () -> Void,
     onOpenWeb: @escaping (String) -> Void
   ) {
     self._model = State(initialValue: HomeModel(context: context))
@@ -36,6 +38,7 @@ struct HomeView: View {
     self.onOpenSwitcher = onOpenSwitcher
     self.onOpenErrors = onOpenErrors
     self.onOpenLive = onOpenLive
+    self.onOpenReplay = onOpenReplay
     self.onOpenWeb = onOpenWeb
   }
 
@@ -165,7 +168,7 @@ struct HomeView: View {
     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: PHSpacing.sm + 2) {
       productChip("Errors", systemImage: "ant", action: onOpenErrors)
       productChip("Live", systemImage: "bolt", action: onOpenLive)
-      productChip("Replay", systemImage: "play.rectangle") { onOpenWeb("/replay/home") }
+      productChip("Replay", systemImage: "play.rectangle", action: onOpenReplay)
       productChip("Persons", systemImage: "person.2") { onOpenWeb("/persons") }
     }
   }

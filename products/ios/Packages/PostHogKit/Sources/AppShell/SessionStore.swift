@@ -23,6 +23,9 @@ public final class SessionStore {
   public private(set) var isSigningIn = false
   public var signInError: String?
 
+  /// Token authority for surfaces that stream outside APIClient (Max's SSE).
+  public var tokenProvider: TokenProviding { broker }
+
   /// Projects the switcher offers, hydrated lazily from the API.
   public private(set) var availableProjects: [Project] = []
   public private(set) var user: User?

@@ -8,6 +8,7 @@ public enum AppTab: String, Sendable, CaseIterable {
   case dashboards
   case flags
   case inbox
+  case max
 }
 
 /// Screens the app can navigate to. Serializable so deep links and state
@@ -19,6 +20,8 @@ public enum Route: Hashable, Sendable {
   case errorsList
   case errorIssue(id: String)
   case liveEvents
+  case replayList
+  case replay(sessionID: String)
 }
 
 /// One router: the selected tab plus a NavigationStack path per tab.
@@ -30,6 +33,7 @@ public final class Router {
   public var dashboardsPath = NavigationPath()
   public var flagsPath = NavigationPath()
   public var inboxPath = NavigationPath()
+  public var maxPath = NavigationPath()
 
   public init() {}
 
@@ -41,7 +45,7 @@ public final class Router {
     case .flag:
       selectedTab = .flags
       flagsPath.append(route)
-    case .errorsList, .errorIssue, .liveEvents:
+    case .errorsList, .errorIssue, .liveEvents, .replayList, .replay:
       pushOnSelectedTab(route)
     }
   }
@@ -53,6 +57,7 @@ public final class Router {
     case .dashboards: dashboardsPath.append(route)
     case .flags: flagsPath.append(route)
     case .inbox: inboxPath.append(route)
+    case .max: maxPath.append(route)
     }
   }
 
@@ -96,6 +101,7 @@ public enum DeepLinkParser {
       case ("dashboard", .some(let id)): .dashboard(id: id)
       case ("insights", .some(let id)): .insight(id: id)
       case ("feature_flags", .some(let id)): .flag(id: id)
+      case ("replay", _) where parts.count >= 2: .replay(sessionID: parts[1])
       default: nil
       }
     guard route != nil else { return nil }
