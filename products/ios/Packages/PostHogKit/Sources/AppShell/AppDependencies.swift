@@ -1,34 +1,37 @@
 import Foundation
+import PostHogAuth
 import SwiftUI
 
-/// The app's composition root: every service the features need, built once at launch.
-/// Feature view models receive exactly the protocols they use via initializer injection;
-/// this struct only rides the SwiftUI environment down to the screens that construct them.
-public struct AppDependencies: Sendable {
+/// The app's composition root, built once at launch. The `SessionStore` it
+/// owns is the single source of session truth; features receive a
+/// `ProjectContext` by value from the shell.
+@MainActor
+public struct AppDependencies {
   public let launchConfiguration: LaunchConfiguration
+  public let session: SessionStore
 
-  public init(launchConfiguration: LaunchConfiguration) {
+  public init(launchConfiguration: LaunchConfiguration, session: SessionStore) {
     self.launchConfiguration = launchConfiguration
+    self.session = session
   }
 
   public static func live(launchConfiguration: LaunchConfiguration) -> AppDependencies {
-    AppDependencies(launchConfiguration: launchConfiguration)
-  }
-}
-
-private struct AppDependenciesKey: EnvironmentKey {
-  static let defaultValue: AppDependencies? = nil
-}
-
-extension EnvironmentValues {
-  public var appDependencies: AppDependencies? {
-    get { self[AppDependenciesKey.self] }
-    set { self[AppDependenciesKey.self] = newValue }
+    let storage: SessionStorage =
+      switch launchConfiguration {
+      case .production:
+        KeychainSessionStore()
+      case .uiTest:
+        InMemorySessionStore()
+      }
+    return AppDependencies(
+      launchConfiguration: launchConfiguration,
+      session: SessionStore(storage: storage)
+    )
   }
 }
 
 extension View {
   public func appDependencies(_ dependencies: AppDependencies) -> some View {
-    environment(\.appDependencies, dependencies)
+    environment(dependencies.session)
   }
 }

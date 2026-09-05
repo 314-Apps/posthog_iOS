@@ -1,0 +1,154 @@
+import Foundation
+import Observation
+import PostHogAPI
+import PostHogAuth
+import PostHogFoundation
+import PostHogQueries
+import SwiftUI
+
+/// The single owner of auth + project state. Everything user-visible flows
+/// from `phase`; features re-fetch via `.task(id: context.projectID)`.
+@MainActor
+@Observable
+public final class SessionStore {
+  public enum Phase {
+    case loading
+    case signedOut
+    /// Signed in but no project selected yet (fresh org-wide sign-in).
+    case needsProject(StoredSession)
+    case signedIn(ProjectContext)
+  }
+
+  public private(set) var phase: Phase = .loading
+  public private(set) var isSigningIn = false
+  public var signInError: String?
+
+  /// Projects the switcher offers, hydrated lazily from the API.
+  public private(set) var availableProjects: [Project] = []
+  public private(set) var user: User?
+
+  private let broker: TokenBroker
+  private let authService: AuthService
+  private let cache: DiskCache
+  private var eventsTask: Task<Void, Never>?
+
+  public init(
+    storage: SessionStorage,
+    authService: AuthService? = nil,
+    cache: DiskCache = DiskCache()
+  ) {
+    self.broker = TokenBroker(storage: storage)
+    self.authService = authService ?? AuthService()
+    self.cache = cache
+    self.eventsTask = Task { [weak self, broker] in
+      for await event in broker.authEvents where event == .sessionInvalidated {
+        self?.handleInvalidatedSession()
+      }
+    }
+  }
+
+  // MARK: Lifecycle
+
+  public func bootstrap() async {
+    guard let session = await broker.currentSession else {
+      phase = .signedOut
+      return
+    }
+    // A stored session with an older scope set silently re-authorizes.
+    guard session.scopeVersion == AuthConfiguration.scopeVersion else {
+      await broker.clear()
+      phase = .signedOut
+      return
+    }
+    adopt(session)
+  }
+
+  public func signIn(region: Region) async {
+    guard !isSigningIn else { return }
+    isSigningIn = true
+    signInError = nil
+    defer { isSigningIn = false }
+    do {
+      let session = try await authService.signIn(region: region)
+      await broker.adopt(session)
+      adopt(session)
+    } catch SignInError.cancelled {
+      // The user closed the sheet; nothing to report.
+    } catch {
+      PHLog.auth.error("sign-in failed: \(error)")
+      signInError = "Couldn't sign in. Check the region and try again."
+    }
+  }
+
+  public func signOut() async {
+    if let session = await broker.currentSession {
+      await authService.revoke(session: session)
+    }
+    await broker.clear()
+    await cache.removeAll()
+    availableProjects = []
+    user = nil
+    phase = .signedOut
+  }
+
+  // MARK: Projects
+
+  public func selectProject(_ projectID: Int) async {
+    guard var session = await broker.currentSession else { return }
+    session.selectedProjectID = projectID
+    await broker.adopt(session)
+    adopt(session)
+  }
+
+  /// Loads the user + project list for the switcher (and the first-run picker).
+  public func loadProjects() async {
+    guard let session = await broker.currentSession else { return }
+    let client = makeClient(region: session.region)
+    do {
+      let me = try await client.me()
+      user = me
+      var projects: [Project] = []
+      for organization in me.organizations {
+        let page = try await client.organizationProjects(organizationID: organization.id)
+        projects.append(contentsOf: page.results)
+      }
+      // Token-scoped teams are the authority when the grant is project-scoped.
+      if !session.scopedTeams.isEmpty {
+        projects = projects.filter { session.scopedTeams.contains($0.id) }
+      }
+      availableProjects = projects
+    } catch {
+      PHLog.api.error("project list load failed: \(error)")
+    }
+  }
+
+  // MARK: Internals
+
+  private func adopt(_ session: StoredSession) {
+    let resolved = session.resolvingSelectedProject()
+    if let projectID = resolved.selectedProjectID {
+      phase = .signedIn(makeContext(session: resolved, projectID: projectID))
+    } else {
+      phase = .needsProject(resolved)
+    }
+  }
+
+  private func makeContext(session: StoredSession, projectID: Int) -> ProjectContext {
+    ProjectContext(
+      region: session.region,
+      projectID: projectID,
+      client: makeClient(region: session.region),
+      cache: cache
+    )
+  }
+
+  private func makeClient(region: Region) -> APIClient {
+    APIClient(baseURL: region.apiBaseURL, tokens: broker)
+  }
+
+  private func handleInvalidatedSession() {
+    availableProjects = []
+    user = nil
+    phase = .signedOut
+  }
+}

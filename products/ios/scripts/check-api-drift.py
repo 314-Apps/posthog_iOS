@@ -3,7 +3,7 @@
 
 Runs without a dev stack:
 1. No Swift source may mention /api/environments/ (deprecated, sunset 2026-07-31).
-2. Every "/api/..." path template literal in PostHogAPI/Endpoints must match a
+2. Every "/api/..." path template literal in package sources must match a
    path in openapi/api-lock.json (placeholders compared structurally).
 3. Every path in endpoint-allowlist.json must be present in the lock (the lock
    is stale when the allowlist grew without a `make api-lock` run).
@@ -18,7 +18,6 @@ from pathlib import Path
 
 IOS_ROOT = Path(__file__).resolve().parent.parent
 SOURCES = IOS_ROOT / "Packages" / "PostHogKit" / "Sources"
-ENDPOINTS_DIR = SOURCES / "PostHogAPI" / "Endpoints"
 LOCK_PATH = IOS_ROOT / "openapi" / "api-lock.json"
 ENDPOINT_ALLOWLIST = IOS_ROOT / "openapi" / "endpoint-allowlist.json"
 
@@ -44,28 +43,29 @@ def main() -> None:
                 "(sunset 2026-07-31) — target /api/projects/ instead"
             )
 
-    if not LOCK_PATH.exists():
-        errors.append("openapi/api-lock.json missing — run `make api-lock`")
-    else:
+    allowlist = json.loads(ENDPOINT_ALLOWLIST.read_text())["paths"]
+    allowed = {normalize(p) for p in allowlist}
+
+    for file in swift_files:
+        for literal in PATH_LITERAL.findall(file.read_text()):
+            if normalize(literal) not in allowed:
+                errors.append(
+                    f"{file.relative_to(IOS_ROOT)}: path {literal!r} is not in "
+                    "endpoint-allowlist.json"
+                )
+
+    # The lock adds spec verification on top once `make api-lock` has run
+    # against a live stack; until then the allowlist check above still holds.
+    if LOCK_PATH.exists():
         lock = json.loads(LOCK_PATH.read_text())
         lock_paths = {normalize(p) for p in lock["openapi"]["paths"]}
-
-        allowlist = json.loads(ENDPOINT_ALLOWLIST.read_text())["paths"]
         for path in allowlist:
             if normalize(path) not in lock_paths:
                 errors.append(
                     f"allowlisted path {path} not in api-lock.json — run `make api-lock`"
                 )
-
-        if ENDPOINTS_DIR.exists():
-            for file in ENDPOINTS_DIR.rglob("*.swift"):
-                for literal in PATH_LITERAL.findall(file.read_text()):
-                    if normalize(literal) not in lock_paths:
-                        errors.append(
-                            f"{file.relative_to(IOS_ROOT)}: path {literal!r} is not in "
-                            "api-lock.json — add it to endpoint-allowlist.json and run "
-                            "`make api-lock`"
-                        )
+    else:
+        print("note: openapi/api-lock.json not generated yet (needs a dev stack)")
 
     if errors:
         for error in errors:

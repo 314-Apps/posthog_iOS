@@ -1,0 +1,87 @@
+import Foundation
+import Observation
+import PostHogAPI
+import SwiftUI
+
+public enum AppTab: String, Sendable, CaseIterable {
+  case home
+  case dashboards
+  case flags
+}
+
+/// Screens the app can navigate to. Serializable so deep links and state
+/// restoration share one vocabulary.
+public enum Route: Hashable, Sendable {
+  case dashboard(id: Int)
+  case insight(id: Int)
+  case flag(id: Int)
+}
+
+/// One router: the selected tab plus a NavigationStack path per tab.
+@MainActor
+@Observable
+public final class Router {
+  public var selectedTab: AppTab = .home
+  public var homePath = NavigationPath()
+  public var dashboardsPath = NavigationPath()
+  public var flagsPath = NavigationPath()
+
+  public init() {}
+
+  public func open(_ route: Route) {
+    switch route {
+    case .dashboard, .insight:
+      selectedTab = .dashboards
+      dashboardsPath.append(route)
+    case .flag:
+      selectedTab = .flags
+      flagsPath.append(route)
+    }
+  }
+
+  public func handle(deepLink url: URL, currentProjectID: Int?) -> DeepLink? {
+    guard let link = DeepLinkParser.parse(url) else { return nil }
+    if let route = link.route, link.projectID == nil || link.projectID == currentProjectID {
+      open(route)
+      return nil
+    }
+    // A different project (or a project-less link) needs the shell's help.
+    return link
+  }
+}
+
+public struct DeepLink: Hashable, Sendable {
+  public let region: Region?
+  public let projectID: Int?
+  public let route: Route?
+}
+
+/// Pure parser for `posthog-ios://` URLs (and, later, universal links).
+/// `posthog-ios://project/123/dashboard/45`, `…/insights/67`, `…/feature_flags/89`.
+public enum DeepLinkParser {
+  public static func parse(_ url: URL) -> DeepLink? {
+    guard url.scheme == "posthog-ios" else { return nil }
+    var parts = [url.host].compactMap { $0 } + url.pathComponents.filter { $0 != "/" }
+    guard !parts.isEmpty else { return nil }
+
+    var projectID: Int?
+    if parts.first == "project", parts.count >= 2, let id = Int(parts[1]) {
+      projectID = id
+      parts.removeFirst(2)
+    }
+
+    guard let head = parts.first else {
+      return DeepLink(region: nil, projectID: projectID, route: nil)
+    }
+    let idPart = parts.count >= 2 ? Int(parts[1]) : nil
+    let route: Route? =
+      switch (head, idPart) {
+      case ("dashboard", .some(let id)): .dashboard(id: id)
+      case ("insights", .some(let id)): .insight(id: id)
+      case ("feature_flags", .some(let id)): .flag(id: id)
+      default: nil
+      }
+    guard route != nil else { return nil }
+    return DeepLink(region: nil, projectID: projectID, route: route)
+  }
+}

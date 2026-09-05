@@ -77,6 +77,7 @@ let package = Package(
       name: "DesignSystemSnapshotTests",
       dependencies: [
         "PostHogDesignSystem",
+        "PostHogQueries",
         .product(name: "SnapshotTesting", package: "swift-snapshot-testing"),
       ]
     ),

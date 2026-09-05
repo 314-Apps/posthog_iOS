@@ -31,11 +31,11 @@ format:
 	swift format format --in-place --recursive Packages App/Sources UITests
 
 snapshot-record: generate
-	SNAPSHOT_RECORD=1 xcodebuild test \
+	TEST_RUNNER_SNAPSHOT_TESTING_RECORD=all xcodebuild test \
 		-project $(PROJECT) -scheme $(SCHEME) \
 		-destination '$(DESTINATION)' \
 		-derivedDataPath $(DERIVED) -clonedSourcePackagesDirPath $(SPM_CLONES) \
-		-only-testing PostHogKitTests/DesignSystemSnapshotTests -quiet || true
+		-only-testing DesignSystemSnapshotTests -quiet || true
 
 api-lock:
 	python3 scripts/update-api-lock.py
