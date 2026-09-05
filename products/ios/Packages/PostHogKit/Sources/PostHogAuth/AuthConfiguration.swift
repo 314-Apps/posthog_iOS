@@ -10,9 +10,9 @@ public struct AuthConfiguration: Sendable {
   public let region: Region
   public let clientID: String
 
-  public init(region: Region) {
+  public init(region: Region, clientID: String) {
     self.region = region
-    self.clientID = Self.clientID(for: region)
+    self.clientID = clientID
   }
 
   /// Bump when `scopes` changes: a stored session with an older version is
@@ -42,18 +42,18 @@ public struct AuthConfiguration: Sendable {
   public static let redirectURI = "posthog-ios://oauth/callback"
   public static let callbackScheme = "posthog-ios"
 
-  // Cloud registration of the first-party iOS OAuth apps is an ops step (plan
-  // PR-B4); until a region's app exists, sign-in there fails with
-  // invalid_client. The dev client is the local-dev-only demo app every
-  // PostHog client app shares (public, committed credentials, guarded to
-  // DEBUG + non-cloud server-side).
-  public static func clientID(for region: Region) -> String {
+  /// Public OAuth client ids, one per known instance. These are not secrets:
+  /// a native app is a public client, so it holds no credential and relies on
+  /// PKCE. The cloud ids were minted through dynamic client registration and
+  /// should be replaced by staff-registered first-party apps, which would also
+  /// retire the consent screen. Unknown instances have no id and register one.
+  public static func preregisteredClientID(for region: Region) -> String? {
     switch region {
-    case .us: "IOS_CLIENT_ID_US_NOT_REGISTERED"
-    case .eu: "IOS_CLIENT_ID_EU_NOT_REGISTERED"
+    case .us: "8dMUWoLwEH6i52NHfhvNnNT8ziXxiPoUpzv5HY8Y"
+    case .eu: "oyaORiYYpIRRAa4K1rN0Z9l9ux0dkaM3Dv3zpRqo"
+    // The local-dev-only demo app every PostHog client shares.
     case .dev: "DC5uRLVbGI02YQ82grxgnK6Qn12SXWpCqdPb60oZ"
-    // Self-hosted instances authenticate with a personal API key, never OAuth.
-    case .selfHosted: "SELF_HOSTED_USES_PERSONAL_API_KEY"
+    case .selfHosted: nil
     }
   }
 

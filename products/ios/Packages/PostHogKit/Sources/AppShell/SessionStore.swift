@@ -80,6 +80,10 @@ public final class SessionStore {
       adopt(session)
     } catch SignInError.cancelled {
       // The user closed the sheet; nothing to report.
+    } catch SignInError.clientUnavailable {
+      signInError =
+        "Couldn't reach this instance to start sign-in. "
+        + "Check your connection, or sign in with an API key instead."
     } catch {
       PHLog.auth.error("sign-in failed: \(error)")
       signInError = "Couldn't sign in. Check the region and try again."

@@ -115,7 +115,14 @@ public actor TokenBroker: TokenProviding {
     current: StoredSession,
     transport: HTTPTransport
   ) async throws -> StoredSession {
-    let configuration = AuthConfiguration(region: current.region)
+    // Refresh must present the client the tokens were issued to.
+    guard
+      let clientID = current.clientID
+        ?? AuthConfiguration.preregisteredClientID(for: current.region)
+    else {
+      throw TokenRefreshError.authFailure(detail: "no_client_id")
+    }
+    let configuration = AuthConfiguration(region: current.region, clientID: clientID)
     let request = TokenEndpoint.makeRequest(
       url: configuration.tokenURL,
       fields: [

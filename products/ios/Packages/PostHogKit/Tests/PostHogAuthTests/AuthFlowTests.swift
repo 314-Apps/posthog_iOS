@@ -6,7 +6,7 @@ import Testing
 
 @Suite struct AuthFlowTests {
   @Test func authorizeURLCarriesEveryRequiredParameter() throws {
-    let configuration = AuthConfiguration(region: .us)
+    let configuration = AuthConfiguration(region: .us, clientID: "client-under-test")
     let pkce = PKCEPair()
     let url = configuration.makeAuthorizeURL(pkce: pkce, state: "st4te")
     let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))

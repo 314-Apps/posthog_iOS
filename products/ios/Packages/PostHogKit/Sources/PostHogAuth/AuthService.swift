@@ -8,6 +8,8 @@ public enum SignInError: Error, Sendable {
   case invalidCallback
   case stateMismatch
   case exchangeFailed(TokenRefreshError)
+  /// No OAuth client is shipped for this instance and registering one failed.
+  case clientUnavailable
 }
 
 /// Drives the OAuth authorization-code + PKCE flow in the system browser.
@@ -16,17 +18,29 @@ public enum SignInError: Error, Sendable {
 @MainActor
 public final class AuthService {
   private let transport: HTTPTransport
+  private let registrar: OAuthClientRegistrar
   private let contextProvider = PresentationContextProvider()
 
-  public init(transport: HTTPTransport = URLSessionTransport()) {
+  public init(
+    transport: HTTPTransport = URLSessionTransport(),
+    registrar: OAuthClientRegistrar? = nil
+  ) {
     self.transport = transport
+    self.registrar = registrar ?? OAuthClientRegistrar(transport: transport)
   }
 
   /// Runs the browser flow for a region and returns a ready session.
   /// Non-ephemeral on purpose: shared Safari cookies let an already-signed-in
   /// user skip credentials, and first-party apps skip the consent screen.
   public func signIn(region: Region) async throws -> StoredSession {
-    let configuration = AuthConfiguration(region: region)
+    let clientID: String
+    do {
+      clientID = try await registrar.clientID(for: region)
+    } catch {
+      PHLog.auth.error("could not resolve an OAuth client: \(error)")
+      throw SignInError.clientUnavailable
+    }
+    let configuration = AuthConfiguration(region: region, clientID: clientID)
     let pkce = PKCEPair()
     let state = PKCEPair.base64URLEncode(Data((0..<24).map { _ in UInt8.random(in: 0...255) }))
     let authorizeURL = configuration.makeAuthorizeURL(pkce: pkce, state: state)
@@ -38,7 +52,11 @@ public final class AuthService {
 
   /// Best-effort revocation, then the caller wipes local state.
   public func revoke(session: StoredSession) async {
-    let configuration = AuthConfiguration(region: session.region)
+    guard
+      let clientID = session.clientID
+        ?? AuthConfiguration.preregisteredClientID(for: session.region)
+    else { return }
+    let configuration = AuthConfiguration(region: session.region, clientID: clientID)
     for token in [session.refreshToken, session.accessToken] {
       let request = TokenEndpoint.makeRequest(
         url: configuration.revokeURL,
@@ -122,7 +140,9 @@ public final class AuthService {
       expiresAt: Date.now.addingTimeInterval(token.expiresIn),
       region: configuration.region,
       scopeVersion: AuthConfiguration.scopeVersion,
-      scopedTeams: token.scopedTeams ?? []
+      scopedTeams: token.scopedTeams ?? [],
+      authMethod: .oauth,
+      clientID: configuration.clientID
     )
     return session.resolvingSelectedProject()
   }

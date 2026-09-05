@@ -20,6 +20,10 @@ public struct StoredSession: Codable, Sendable, Equatable {
   public var selectedOrganizationID: String?
   /// Optional so blobs written before self-hosted support still decode.
   public var authMethod: AuthMethod?
+  /// The OAuth client the tokens were issued to, so refresh presents the same
+  /// one. Absent for API-key sessions and for blobs written before the app
+  /// could register its own client.
+  public var clientID: String?
 
   public var isPersonalAPIKey: Bool { authMethod == .personalAPIKey }
 
@@ -32,7 +36,8 @@ public struct StoredSession: Codable, Sendable, Equatable {
     scopedTeams: [Int],
     selectedProjectID: Int? = nil,
     selectedOrganizationID: String? = nil,
-    authMethod: AuthMethod? = .oauth
+    authMethod: AuthMethod? = .oauth,
+    clientID: String? = nil
   ) {
     self.accessToken = accessToken
     self.refreshToken = refreshToken
@@ -43,6 +48,7 @@ public struct StoredSession: Codable, Sendable, Equatable {
     self.selectedProjectID = selectedProjectID
     self.selectedOrganizationID = selectedOrganizationID
     self.authMethod = authMethod
+    self.clientID = clientID
   }
 
   /// Keeps the selected project when still authorized, else falls back to the
