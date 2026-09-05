@@ -58,6 +58,6 @@ Only three sanctioned reasons:
 
 1. The user asks.
 2. A Django API this client calls must change — that is a monorepo-side change (invoke `/improving-drf-endpoints`, `/django-migrations` as usual, separate PR).
-3. The fixed list of root files that reference this tree: `.github/workflows/ios-*.yml`, the `pnpm-workspace.yaml` negative glob, `.dockerignore`, `.oxfmtrc.json` excludes, and the `changes` filters in `ci-frontend.yml` / `ci-backend.yml` / `ci-storybook.yml` / `.depot/workflows/ci-backend.yml`.
+3. The fixed list of root files that reference this tree: `.github/workflows/ios-*.yml`, the `ios:*` command entries in `hogli.yaml`, the `pnpm-workspace.yaml` negative glob, `.dockerignore`, `.oxfmtrc.json` excludes, and the `changes` filters in `ci-frontend.yml` / `ci-backend.yml` / `ci-storybook.yml` / `.depot/workflows/ci-backend.yml`.
 
 Never let anything in this tree alter the root pnpm lockfile, pyproject, or Django settings.

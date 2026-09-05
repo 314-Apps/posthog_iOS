@@ -36,9 +36,10 @@ Step outside only when one of these is true:
    PR — invoke `/improving-drf-endpoints` and `/django-migrations` as usual. The app-side
    contract then updates via `openapi/endpoint-allowlist.json` + `make api-lock`.
 3. **iOS CI / config that lives at the root by design.** The list is fixed:
-   `.github/workflows/ios-*.yml`, and the exclusion entries in `pnpm-workspace.yaml`,
-   `.dockerignore`, `.oxfmtrc.json`, and the `changes` filters of `ci-frontend.yml`,
-   `ci-backend.yml`, `ci-storybook.yml`, `.depot/workflows/ci-backend.yml`.
+   `.github/workflows/ios-*.yml`, the `ios:*` command entries in `hogli.yaml`, and the
+   exclusion entries in `pnpm-workspace.yaml`, `.dockerignore`, `.oxfmtrc.json`, and the
+   `changes` filters of `ci-frontend.yml`, `ci-backend.yml`, `ci-storybook.yml`,
+   `.depot/workflows/ci-backend.yml`.
 
 ## Toolchain (overrides root CLAUDE.md)
 
