@@ -2,7 +2,7 @@ import PostHogFoundation
 import PostHogQueries
 import Testing
 
-@testable import FeatureDrilldown
+@testable import PostHogDrilldown
 
 @Suite struct QueryProvenanceTests {
   @Test func readsTheFieldsAnInsightCarries() {

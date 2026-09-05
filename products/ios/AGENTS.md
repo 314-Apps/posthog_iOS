@@ -24,8 +24,9 @@ All code lives in one local SPM package, `Packages/PostHogKit`, split into targe
 3. `PostHogQueries` — the `DataQuery` union + response models.
 4. `PostHogAuth` — PKCE, Keychain, TokenBroker, AuthService.
 5. `PostHogDesignSystem` — tokens, components, `InsightRenderer`.
-6. `Feature*` targets — one per product surface. Features never import each other.
-7. `AppShell` — tabs, Router, deep links, SessionStore, DI. The app target depends only on this.
+6. `PostHogDrilldown` — the shared drill-down surfaces (people behind a number, query provenance). A layer rather than a feature precisely so several features can present it.
+7. `Feature*` targets — one per product surface. Features never import each other.
+8. `AppShell` — tabs, Router, deep links, SessionStore, DI. The app target depends only on this.
 
 The `App/` directory is a thin shell: entry point, entitlements, Info.plist keys, assets, xcconfigs. Business logic in `App/` is a defect.
 

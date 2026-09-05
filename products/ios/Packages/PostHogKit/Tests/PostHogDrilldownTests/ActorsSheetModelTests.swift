@@ -5,7 +5,7 @@ import PostHogQueries
 import PostHogTestSupport
 import Testing
 
-@testable import FeatureDrilldown
+@testable import PostHogDrilldown
 
 private let sourceQuery = DataQuery(raw: [
   "kind": "TrendsQuery",

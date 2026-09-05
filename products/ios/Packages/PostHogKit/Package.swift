@@ -34,15 +34,25 @@ let package = Package(
       name: "PostHogDesignSystem",
       dependencies: ["PostHogFoundation", "PostHogQueries"]
     ),
+    // Shared drill-down surfaces: who is behind this number, and where did it
+    // come from. Sits below the features so any of them can present it.
+    .target(
+      name: "PostHogDrilldown",
+      dependencies: ["PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem"]
+    ),
 
     // MARK: Features (never import each other)
     .target(
       name: "FeatureDashboards",
-      dependencies: ["PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem"]
+      dependencies: [
+        "PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem", "PostHogDrilldown",
+      ]
     ),
     .target(
       name: "FeatureInsights",
-      dependencies: ["PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem"]
+      dependencies: [
+        "PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem", "PostHogDrilldown",
+      ]
     ),
     .target(
       name: "FeatureFlags",
@@ -82,7 +92,9 @@ let package = Package(
     ),
     .target(
       name: "FeatureWeb",
-      dependencies: ["PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem"]
+      dependencies: [
+        "PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem", "PostHogDrilldown",
+      ]
     ),
     .target(
       name: "FeaturePeople",
@@ -96,12 +108,6 @@ let package = Package(
       name: "FeatureActivity",
       dependencies: ["PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem"]
     ),
-    // Shared by every surface that renders a metric: who is behind this number,
-    // and where did it come from.
-    .target(
-      name: "FeatureDrilldown",
-      dependencies: ["PostHogFoundation", "PostHogAPI", "PostHogQueries", "PostHogDesignSystem"]
-    ),
 
     // MARK: Shell
     .target(
@@ -111,7 +117,7 @@ let package = Package(
         "FeatureDashboards", "FeatureInsights", "FeatureFlags", "FeatureSettings",
         "FeatureInbox", "FeatureErrors", "FeatureLive", "FeatureReplay", "FeatureMax",
         "FeatureExperiments", "FeatureSurveys", "FeatureWeb", "FeaturePeople",
-        "FeatureSQL", "FeatureActivity", "FeatureDrilldown",
+        "FeatureSQL", "FeatureActivity",
         .product(name: "PostHog", package: "posthog-ios"),
       ]
     ),
@@ -147,8 +153,8 @@ let package = Package(
     .testTarget(name: "FeatureSQLTests", dependencies: ["FeatureSQL", "PostHogTestSupport"]),
     .testTarget(name: "FeatureActivityTests", dependencies: ["FeatureActivity", "PostHogTestSupport"]),
     .testTarget(
-      name: "FeatureDrilldownTests",
-      dependencies: ["FeatureDrilldown", "PostHogTestSupport"]
+      name: "PostHogDrilldownTests",
+      dependencies: ["PostHogDrilldown", "PostHogTestSupport"]
     ),
     .testTarget(
       name: "DesignSystemSnapshotTests",
