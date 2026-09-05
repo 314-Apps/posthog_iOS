@@ -42,13 +42,16 @@ public struct AuthConfiguration: Sendable {
   public static let redirectURI = "posthog-ios://oauth/callback"
   public static let callbackScheme = "posthog-ios"
 
-  // Registration of the first-party iOS OAuth apps is an ops step (plan PR-B4).
-  // Until a region's app exists, sign-in there fails with invalid_client.
+  // Cloud registration of the first-party iOS OAuth apps is an ops step (plan
+  // PR-B4); until a region's app exists, sign-in there fails with
+  // invalid_client. The dev client is the local-dev-only demo app every
+  // PostHog client app shares (public, committed credentials, guarded to
+  // DEBUG + non-cloud server-side).
   public static func clientID(for region: Region) -> String {
     switch region {
     case .us: "IOS_CLIENT_ID_US_NOT_REGISTERED"
     case .eu: "IOS_CLIENT_ID_EU_NOT_REGISTERED"
-    case .dev: "IOS_CLIENT_ID_DEV_NOT_REGISTERED"
+    case .dev: "DC5uRLVbGI02YQ82grxgnK6Qn12SXWpCqdPb60oZ"
     }
   }
 

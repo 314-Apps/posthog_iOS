@@ -20,10 +20,9 @@ Run the `PostHog` scheme on an iPhone simulator. Pick US or EU on the welcome sc
 
 ## Against a local stack
 
-1. Start the stack from the repo root: `hogli start` (Django on `http://localhost:8010`).
-2. Register a local OAuth app (one-time): follow `docs/published/handbook/engineering/oauth-development-guide.md` — Django admin → OAuth applications → new **Public** client, algorithm RS256, redirect URI `posthog-ios://oauth/callback`, and set `OIDC_RSA_PRIVATE_KEY` in your `.env`.
-3. Put the client id in `Packages/PostHogKit/Sources/PostHogAuth/AuthConfiguration.swift` under the `.dev` region.
-4. Debug builds show a **Local dev** region on the welcome screen (compiled in via `POSTHOG_DEV_REGION`); ATS allows plain-HTTP localhost.
+1. Start the stack from the repo root: `hogli start` (Django on `http://localhost:8010`), with `OIDC_RSA_PRIVATE_KEY` set in your `.env` (see `docs/published/handbook/engineering/oauth-development-guide.md`).
+2. Generate demo data once (signup flow or `generate_demo_data`); it seeds the shared local dev OAuth app, whose redirect list includes `posthog-ios://oauth/callback`. The app's `.dev` region already uses that client id.
+3. Debug builds show a **Local dev** region on the welcome screen (compiled in via `POSTHOG_DEV_REGION`); ATS allows plain-HTTP localhost.
 
 The simulator reaches `localhost` directly. On a physical device, use your Mac's LAN IP in `Region.dev` or a tunnel.
 
