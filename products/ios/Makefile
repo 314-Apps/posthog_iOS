@@ -4,7 +4,7 @@ DESTINATION := platform=iOS Simulator,name=iPhone 17
 DERIVED := .build/DerivedData
 SPM_CLONES := .spm-packages
 
-.PHONY: generate build test lint format snapshot-record api-lock check-api player clean
+.PHONY: generate build test lint format snapshot-record api-lock check-api check-player player clean
 
 generate:
 	xcodegen generate --spec project.yml --project .
@@ -43,6 +43,9 @@ api-lock:
 check-api:
 	python3 scripts/check-api-drift.py
 
+check-player:
+	python3 scripts/check-player-freshness.py
+
 clean:
 	rm -rf $(PROJECT) $(DERIVED) $(SPM_CLONES)
 
@@ -51,3 +54,4 @@ clean:
 # the bundled copy itself, so there is no window in which the two can disagree.
 player:
 	cd player && npm install --silent && npm run build
+	python3 scripts/check-player-freshness.py --write

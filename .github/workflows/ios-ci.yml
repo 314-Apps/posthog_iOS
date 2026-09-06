@@ -46,6 +46,9 @@ jobs:
             - name: Check Swift API surface against the committed lock
               run: python3 products/ios/scripts/check-api-drift.py
 
+            - name: Check the bundled replay player is current
+              run: python3 products/ios/scripts/check-player-freshness.py
+
     build-test:
         name: Build and test
         runs-on: depot-macos-26
