@@ -44,3 +44,62 @@ export interface UpdateMcpServerInstallationOptions {
   description?: string;
   is_enabled?: boolean;
 }
+
+export type Survey = Schemas.Survey;
+export type SurveyStatsResponse = Schemas.SurveyStatsResponse;
+export type SurveyStatusFilter = "draft" | "running" | "complete";
+
+export interface ListSurveysOptions {
+  search?: string;
+  status?: SurveyStatusFilter;
+  limit?: number;
+  offset?: number;
+}
+
+export interface SurveyListPage {
+  results: Survey[];
+  count: number;
+  hasMore: boolean;
+}
+
+export interface SurveyDateRange {
+  /** ISO 8601 timestamp; omitted means from the survey start. */
+  since?: string;
+  /** ISO 8601 timestamp; omitted means up to now. */
+  until?: string;
+}
+
+export interface SurveyResponseAnswer {
+  question_id: string;
+  question_index: number;
+  question_text: string;
+  question_type: string;
+  /** String for most question types, a string list for multiple choice. */
+  answer: string | string[] | null;
+}
+
+export interface SurveyResponseRow {
+  uuid: string;
+  distinct_id: string;
+  session_id: string | null;
+  submitted_at: string;
+  answers: SurveyResponseAnswer[];
+  extra: Record<string, unknown>;
+}
+
+export interface SurveyResponsesPage {
+  results: SurveyResponseRow[];
+  has_more: boolean;
+  limit: number;
+  offset: number;
+}
+
+export interface ListSurveyResponsesOptions extends SurveyDateRange {
+  limit?: number;
+  offset?: number;
+}
+
+export interface UpdateSurveyOptions {
+  archived?: boolean;
+  end_date?: string | null;
+}

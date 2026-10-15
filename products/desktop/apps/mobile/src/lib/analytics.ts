@@ -27,6 +27,8 @@ export const ANALYTICS_EVENTS = {
   PROMPT_SENT: "Prompt sent",
   TASK_RUN_STOPPED: "Task run stopped",
   AGENT_TURN_FEEDBACK: SHARED_ANALYTICS_EVENTS.AGENT_TURN_FEEDBACK,
+  SURVEY_OPENED: "Survey opened",
+  SURVEY_ACTION: "Survey action",
 } as const;
 
 export type SignInMethod = "oauth" | "dev_api_key" | "qr_scan";
@@ -225,6 +227,17 @@ export interface TaskRunStoppedProperties {
   prompts_sent?: number;
 }
 
+export interface SurveyOpenedProperties {
+  survey_id: string;
+  status: "draft" | "running" | "complete";
+}
+
+export interface SurveyActionProperties {
+  survey_id: string;
+  action: "launch" | "stop" | "resume" | "archive" | "unarchive";
+  success: boolean;
+}
+
 export type EventPropertyMap = {
   [ANALYTICS_EVENTS.INBOX_VIEWED]: InboxViewedProperties;
   [ANALYTICS_EVENTS.INBOX_REPORT_OPENED]: InboxReportOpenedProperties;
@@ -241,6 +254,8 @@ export type EventPropertyMap = {
   [ANALYTICS_EVENTS.PROMPT_SENT]: PromptSentProperties;
   [ANALYTICS_EVENTS.TASK_RUN_STOPPED]: TaskRunStoppedProperties;
   [ANALYTICS_EVENTS.AGENT_TURN_FEEDBACK]: AgentTurnFeedbackProperties;
+  [ANALYTICS_EVENTS.SURVEY_OPENED]: SurveyOpenedProperties;
+  [ANALYTICS_EVENTS.SURVEY_ACTION]: SurveyActionProperties;
 };
 
 export interface Analytics {

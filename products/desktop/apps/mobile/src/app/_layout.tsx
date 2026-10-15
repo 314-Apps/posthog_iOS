@@ -142,6 +142,10 @@ function RootLayoutNav({ isConnected }: RootLayoutNavProps) {
         options={{ headerShown: false }}
       />
 
+      {/* Surveys — list and per-survey results, pushed like settings. */}
+      <Stack.Screen name="surveys/index" options={{ headerShown: false }} />
+      <Stack.Screen name="surveys/[id]" options={{ headerShown: false }} />
+
       {/* Inbox report detail - modal presentation, no native header
           (the in-content title block is the canonical header). Catch-all
           segment so the route also tolerates the cosmetic slug suffix on

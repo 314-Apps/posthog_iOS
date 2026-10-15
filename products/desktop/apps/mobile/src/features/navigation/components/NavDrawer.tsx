@@ -2,6 +2,7 @@ import { Text } from "@components/text";
 import { usePathname, useRouter } from "expo-router";
 import {
   CaretRight,
+  ChatCenteredText,
   GearSix,
   ListBullets,
   PuzzlePiece,
@@ -119,6 +120,11 @@ const NavDrawerContent = memo(function NavDrawerContent({
     if (pathname === "/mcp-servers") return;
     router.push("/mcp-servers");
   };
+  const handleSurveys = () => {
+    close();
+    if (pathname === "/surveys") return;
+    router.push("/surveys");
+  };
   const handleHome = () => navigateTo("/tasks");
 
   const handleTaskPress = (taskId: string) => {
@@ -132,6 +138,7 @@ const NavDrawerContent = memo(function NavDrawerContent({
   const isOnInbox = pathname === "/inbox";
   const isOnSettings = pathname === "/settings";
   const isOnMcpServers = pathname === "/mcp-servers";
+  const isOnSurveys = pathname === "/surveys";
 
   return (
     <View
@@ -166,6 +173,18 @@ const NavDrawerContent = memo(function NavDrawerContent({
           label="Inbox"
           active={isOnInbox}
           onPress={handleInbox}
+        />
+        <DrawerItem
+          icon={
+            <ChatCenteredText
+              size={22}
+              color={isOnSurveys ? iconColorActive : iconColor}
+              weight={isOnSurveys ? "fill" : "regular"}
+            />
+          }
+          label="Surveys"
+          active={isOnSurveys}
+          onPress={handleSurveys}
         />
         <DrawerItem
           icon={

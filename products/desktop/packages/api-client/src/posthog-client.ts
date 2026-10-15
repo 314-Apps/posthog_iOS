@@ -478,12 +478,20 @@ export const MCP_CATEGORIES = [
 ] as const;
 
 import type {
+  ListSurveyResponsesOptions,
+  ListSurveysOptions,
   McpApprovalState,
   McpAuthType,
   McpCategory,
   McpInstallationTool,
   McpRecommendedServer,
   McpServerInstallation,
+  Survey,
+  SurveyDateRange,
+  SurveyListPage,
+  SurveyResponsesPage,
+  SurveyStatsResponse,
+  UpdateSurveyOptions,
 } from "./types";
 export type {
   McpApprovalState,
@@ -6368,6 +6376,125 @@ export class PostHogAPIClient {
         `Failed to delete signal user autonomy config: ${response.statusText}`,
       );
     }
+  }
+
+  /** One page of the project's surveys, newest first (or by relevance when searching). */
+  async listSurveys(options: ListSurveysOptions = {}): Promise<SurveyListPage> {
+    const teamId = await this.getTeamId();
+    const path = `/api/projects/${teamId}/surveys/`;
+    const url = new URL(`${this.api.baseUrl}${path}`);
+    const limit = options.limit ?? 50;
+    url.searchParams.set("limit", String(limit));
+    url.searchParams.set("offset", String(options.offset ?? 0));
+    if (options.search) url.searchParams.set("search", options.search);
+    if (options.status) url.searchParams.set("status", options.status);
+
+    const response = await this.api.fetcher.fetch({ method: "get", url, path });
+    const data = (await response.json()) as {
+      results?: Survey[];
+      count?: number;
+      next?: string | null;
+    };
+    const results = data.results ?? [];
+    return {
+      results,
+      count: data.count ?? results.length,
+      hasMore: Boolean(data.next),
+    };
+  }
+
+  async getSurvey(surveyId: string): Promise<Survey> {
+    const projectId = (await this.getTeamId()).toString();
+    return await this.api.get("/api/projects/{project_id}/surveys/{id}/", {
+      path: { project_id: projectId, id: surveyId },
+    });
+  }
+
+  /** Captured submission counts keyed by survey id. */
+  async getSurveyResponseCounts(
+    surveyIds: string[],
+  ): Promise<Record<string, number>> {
+    if (surveyIds.length === 0) return {};
+    const teamId = await this.getTeamId();
+    const path = `/api/projects/${teamId}/surveys/responses_count/`;
+    const url = new URL(`${this.api.baseUrl}${path}`);
+    url.searchParams.set("survey_ids", surveyIds.join(","));
+
+    const response = await this.api.fetcher.fetch({ method: "get", url, path });
+    return (await response.json()) as Record<string, number>;
+  }
+
+  /** Funnel counts, rates, and per-question answer distributions. */
+  async getSurveyStats(
+    surveyId: string,
+    range: SurveyDateRange = {},
+  ): Promise<SurveyStatsResponse> {
+    const projectId = (await this.getTeamId()).toString();
+    return await this.api.get(
+      "/api/projects/{project_id}/surveys/{id}/stats/",
+      {
+        path: { project_id: projectId, id: surveyId },
+        query: {
+          include_per_question_stats: true,
+          ...(range.since ? { date_from: range.since } : {}),
+          ...(range.until ? { date_to: range.until } : {}),
+        },
+      },
+    );
+  }
+
+  /** Individual responses, newest first, with question text resolved. */
+  async listSurveyResponses(
+    surveyId: string,
+    options: ListSurveyResponsesOptions = {},
+  ): Promise<SurveyResponsesPage> {
+    const teamId = await this.getTeamId();
+    const path = `/api/projects/${teamId}/surveys/${surveyId}/responses/`;
+    const url = new URL(`${this.api.baseUrl}${path}`);
+    url.searchParams.set("limit", String(options.limit ?? 100));
+    url.searchParams.set("offset", String(options.offset ?? 0));
+    if (options.since) url.searchParams.set("since", options.since);
+    if (options.until) url.searchParams.set("until", options.until);
+
+    const response = await this.api.fetcher.fetch({ method: "get", url, path });
+    return (await response.json()) as SurveyResponsesPage;
+  }
+
+  async launchSurvey(surveyId: string): Promise<Survey> {
+    return await this.postSurveyAction(surveyId, "launch");
+  }
+
+  async stopSurvey(surveyId: string): Promise<Survey> {
+    return await this.postSurveyAction(surveyId, "stop");
+  }
+
+  async updateSurvey(
+    surveyId: string,
+    updates: UpdateSurveyOptions,
+  ): Promise<void> {
+    const teamId = await this.getTeamId();
+    const path = `/api/projects/${teamId}/surveys/${surveyId}/`;
+    await this.api.fetcher.fetch({
+      method: "patch",
+      url: new URL(`${this.api.baseUrl}${path}`),
+      path,
+      overrides: { body: JSON.stringify(updates) },
+    });
+  }
+
+  private async postSurveyAction(
+    surveyId: string,
+    action: "launch" | "stop",
+  ): Promise<Survey> {
+    const teamId = await this.getTeamId();
+    const path = `/api/projects/${teamId}/surveys/${surveyId}/${action}/`;
+    const response = await this.api.fetcher.fetch({
+      method: "post",
+      url: new URL(`${this.api.baseUrl}${path}`),
+      path,
+      overrides: { body: JSON.stringify({}) },
+    });
+    return (await response.json()) as Survey;
   }
 
   async getMcpServers(): Promise<McpRecommendedServer[]> {
