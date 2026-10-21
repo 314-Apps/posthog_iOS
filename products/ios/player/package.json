@@ -1,0 +1,19 @@
+{
+    "name": "@posthog/ios-replay-player",
+    "version": "0.0.1",
+    "private": true,
+    "description": "Self-contained rrweb replay player bundled into the native iOS app",
+    "main": "dist/player.html",
+    "scripts": {
+        "build": "node build.mjs",
+        "link:shared": "node build.mjs --link-only"
+    },
+    "dependencies": {
+        "esbuild": "0.25.11",
+        "fflate": "0.8.2",
+        "fzstd": "0.1.1",
+        "hls.js": "1.5.7",
+        "p-limit": "3.1.0",
+        "posthog-js": "1.427.2"
+    }
+}

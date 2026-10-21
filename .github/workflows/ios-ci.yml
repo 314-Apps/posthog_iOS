@@ -1,0 +1,127 @@
+name: iOS CI
+
+# Trigger-level paths are safe here because `iOS CI Pass` is deliberately NOT a
+# required check — promoting it to required means converting to the desktop-ci
+# changes-job shape in the same PR as the ruleset edit.
+on:
+    pull_request:
+        paths:
+            - 'products/ios/**'
+            - '.github/workflows/ios-ci.yml'
+    push:
+        branches: [master]
+        paths:
+            - 'products/ios/**'
+            - '.github/workflows/ios-ci.yml'
+    workflow_dispatch:
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+    cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+    lint:
+        name: SwiftLint
+        runs-on: depot-ubuntu-24.04
+        timeout-minutes: 10
+        container: ghcr.io/realm/swiftlint:0.65.1
+        steps:
+            - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+              with:
+                  sparse-checkout: products/ios
+                  sparse-checkout-cone-mode: false
+            - name: SwiftLint
+              working-directory: products/ios
+              run: swiftlint lint --strict --reporter github-actions-logging
+
+    check-api:
+        name: API drift check
+        runs-on: depot-ubuntu-24.04
+        timeout-minutes: 5
+        steps:
+            - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+              with:
+                  sparse-checkout: products/ios
+                  sparse-checkout-cone-mode: false
+            - name: Check Swift API surface against the committed lock
+              run: python3 products/ios/scripts/check-api-drift.py
+
+            - name: Check the bundled replay player is current
+              run: python3 products/ios/scripts/check-player-freshness.py
+
+    build-test:
+        name: Build and test
+        runs-on: depot-macos-26
+        timeout-minutes: 45
+        steps:
+            - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+              with:
+                  sparse-checkout: products/ios
+                  sparse-checkout-cone-mode: false
+            - name: Install XcodeGen
+              run: brew install xcodegen
+            - name: Restore SPM cache
+              uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+              with:
+                  path: products/ios/.spm-packages
+                  key: ios-spm-${{ runner.os }}-${{ hashFiles('products/ios/Packages/PostHogKit/Package.resolved') }}
+                  restore-keys: ios-spm-${{ runner.os }}-
+            - name: Generate project
+              working-directory: products/ios
+              run: make generate
+            - name: swift format lint
+              working-directory: products/ios
+              run: swift format lint --strict --recursive Packages App/Sources UITests
+            - name: Build for testing
+              working-directory: products/ios
+              run: |
+                  xcodebuild build-for-testing \
+                      -project PostHog.xcodeproj -scheme PostHog \
+                      -destination 'platform=iOS Simulator,name=iPhone 17' \
+                      -derivedDataPath .build/DerivedData \
+                      -clonedSourcePackagesDirPath .spm-packages \
+                      -quiet
+            - name: Test without building
+              working-directory: products/ios
+              run: |
+                  xcodebuild test-without-building \
+                      -project PostHog.xcodeproj -scheme PostHog \
+                      -destination 'platform=iOS Simulator,name=iPhone 17' \
+                      -derivedDataPath .build/DerivedData \
+                      -clonedSourcePackagesDirPath .spm-packages
+            - name: Upload test results on failure
+              if: failure()
+              uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+              with:
+                  name: ios-test-results
+                  path: products/ios/.build/DerivedData/Logs/Test/*.xcresult
+                  retention-days: 5
+            - name: Save SPM cache
+              if: github.event_name == 'push'
+              uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+              with:
+                  path: products/ios/.spm-packages
+                  key: ios-spm-${{ runner.os }}-${{ hashFiles('products/ios/Packages/PostHogKit/Package.resolved') }}
+
+    ios-ci-pass:
+        name: iOS CI Pass
+        runs-on: depot-ubuntu-24.04
+        timeout-minutes: 5
+        needs: [lint, check-api, build-test]
+        if: ${{ !cancelled() }}
+        steps:
+            - name: Check dependency results
+              run: |
+                  if [[ "${{ needs.lint.result }}" != 'success' && "${{ needs.lint.result }}" != 'skipped' ]]; then
+                      echo "lint: ${{ needs.lint.result }}"
+                      exit 1
+                  fi
+                  if [[ "${{ needs.check-api.result }}" != 'success' && "${{ needs.check-api.result }}" != 'skipped' ]]; then
+                      echo "check-api: ${{ needs.check-api.result }}"
+                      exit 1
+                  fi
+                  if [[ "${{ needs.build-test.result }}" != 'success' && "${{ needs.build-test.result }}" != 'skipped' ]]; then
+                      echo "build-test: ${{ needs.build-test.result }}"
+                      exit 1
+                  fi
+                  echo "iOS CI passed"

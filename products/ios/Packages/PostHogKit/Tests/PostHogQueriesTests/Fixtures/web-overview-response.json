@@ -1,0 +1,9 @@
+{
+  "results": [
+    {"key": "visitors", "value": 48200, "previous": 45861, "changeFromPreviousPct": 5.1, "kind": "unit", "isIncreaseBad": false},
+    {"key": "views", "value": 131000, "previous": 127929, "changeFromPreviousPct": 2.4, "kind": "unit", "isIncreaseBad": false},
+    {"key": "sessions", "value": 59800, "previous": 60896, "changeFromPreviousPct": -1.8, "kind": "unit", "isIncreaseBad": false},
+    {"key": "bounce rate", "value": 38.0, "previous": 40.1, "changeFromPreviousPct": -5.2, "kind": "percentage", "isIncreaseBad": true},
+    {"key": "session duration", "value": 186.0, "previous": 179.0, "changeFromPreviousPct": 3.9, "kind": "duration_s", "isIncreaseBad": false}
+  ]
+}

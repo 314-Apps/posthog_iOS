@@ -95,6 +95,8 @@ products/**/node_modules
 # The `changes` job in container-images-cd.yml mirrors these lines to decide whether a push
 # can change the image, so keep the two in step.
 products/desktop/*
+# products/ios is the native Swift app; nothing in it belongs in an image build context.
+products/ios/*
 nodejs/node_modules
 # The image-scrub sidecar is a standalone package nested in nodejs/src; keep its deps and (Stage-2) model
 # artifacts out of the plugin-server build context.

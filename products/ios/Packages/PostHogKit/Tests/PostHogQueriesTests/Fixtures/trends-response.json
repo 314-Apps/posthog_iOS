@@ -1,0 +1,24 @@
+{
+  "results": [
+    {
+      "label": "user signed up",
+      "count": 11573,
+      "data": [1180, 1287, 1349, 1502, 1610, 2141, 2504],
+      "labels": ["8-Mar", "9-Mar", "10-Mar", "11-Mar", "12-Mar", "13-Mar", "14-Mar"],
+      "days": ["2026-03-08", "2026-03-09", "2026-03-10", "2026-03-11", "2026-03-12", "2026-03-13", "2026-03-14"],
+      "compare_label": "current",
+      "action": {"id": "user signed up", "math": "total"}
+    },
+    {
+      "label": "user signed up",
+      "count": 9808,
+      "data": [1101, 1189, 1240, 1355, 1422, 1698, 1803],
+      "labels": ["1-Mar", "2-Mar", "3-Mar", "4-Mar", "5-Mar", "6-Mar", "7-Mar"],
+      "days": ["2026-03-01", "2026-03-02", "2026-03-03", "2026-03-04", "2026-03-05", "2026-03-06", "2026-03-07"],
+      "compare_label": "previous"
+    }
+  ],
+  "hogql": "SELECT 1",
+  "is_cached": false,
+  "timezone": "UTC"
+}

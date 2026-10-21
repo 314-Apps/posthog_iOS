@@ -80,6 +80,8 @@
         }
     ],
     "ignorePatterns": [
+        "products/ios/**/*.json",
+        "products/ios/**/*.xcstrings",
         "products/desktop/**/*.ts",
         "products/desktop/**/*.tsx",
         "products/desktop/**/*.js",
