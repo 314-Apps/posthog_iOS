@@ -12,21 +12,9 @@ import {
   getBaseUrl,
   getProjectId,
 } from "@/lib/api";
+import { mobilehogAnalytics } from "@/lib/analytics";
 import { sessionIdentity } from "@/lib/auth";
 import { logger } from "@/lib/logger";
-
-const noopAnalytics = {
-  initialize: () => {},
-  track: () => {},
-  identify: () => {},
-  setCurrentUserId: () => {},
-  getCurrentUserId: () => null,
-  getOrCreateSessionId: () => "mobilehog",
-  resetUser: () => {},
-  captureException: () => {},
-  flush: async () => {},
-  shutdown: async () => {},
-};
 
 let engine: CloudTaskEngine | null = null;
 
@@ -37,6 +25,7 @@ function getEngine(): CloudTaskEngine {
     if (sessionIdentity() !== identity)
       throw new Error("Session changed. Sign in again.");
   };
+  mobilehogAnalytics.initialize();
   engine = createCloudTaskEngine({
     auth: {
       authenticatedFetch: (url, init) => {
@@ -48,7 +37,7 @@ function getEngine(): CloudTaskEngine {
         return { apiHost: getBaseUrl(), teamId: getProjectId() };
       },
     },
-    analytics: noopAnalytics,
+    analytics: mobilehogAnalytics,
     logger,
     // React Native's global fetch cannot stream a body; expo/fetch can.
     streamFetch: ((url, init) =>

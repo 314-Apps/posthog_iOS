@@ -1,0 +1,7 @@
+{
+  "results": [
+    {"date": "2026-02-09T00:00:00Z", "label": "Week 0", "values": [{"count": 412}, {"count": 181}, {"count": 128}, {"count": 107}]},
+    {"date": "2026-02-16T00:00:00Z", "label": "Week 1", "values": [{"count": 388}, {"count": 170}, {"count": 121}]},
+    {"date": "2026-02-23T00:00:00Z", "label": "Week 2", "values": [{"count": 441}, {"count": 196}]}
+  ]
+}

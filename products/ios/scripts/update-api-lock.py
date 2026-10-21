@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+# ruff: noqa: T201 allow print statements
+"""Refresh openapi/api-lock.json from the repo's generated OpenAPI spec.
+
+Needs a running dev stack: builds frontend/tmp/openapi.json via `hogli
+build:openapi-schema` (skipped when the file is already fresh), filters it to
+the paths in endpoint-allowlist.json plus every transitively referenced
+component schema, filters frontend/src/queries/schema.json to the kinds in
+query-kind-allowlist.json plus their $ref closure, and writes a deterministic
+api-lock.json that CI can diff without a stack.
+"""
+
+from __future__ import annotations
+
+import sys
+import json
+import time
+import subprocess
+from pathlib import Path
+from typing import Any
+
+IOS_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = IOS_ROOT.parent.parent
+OPENAPI_JSON = REPO_ROOT / "frontend" / "tmp" / "openapi.json"
+QUERY_SCHEMA_JSON = REPO_ROOT / "frontend" / "src" / "queries" / "schema.json"
+ENDPOINT_ALLOWLIST = IOS_ROOT / "openapi" / "endpoint-allowlist.json"
+KIND_ALLOWLIST = IOS_ROOT / "openapi" / "query-kind-allowlist.json"
+LOCK_PATH = IOS_ROOT / "openapi" / "api-lock.json"
+
+FRESHNESS_SECONDS = 30 * 60
+
+
+def fail(message: str) -> None:
+    print(f"error: {message}", file=sys.stderr)
+    sys.exit(1)
+
+
+def ensure_openapi_spec() -> dict[str, Any]:
+    stale = not OPENAPI_JSON.exists() or time.time() - OPENAPI_JSON.stat().st_mtime > FRESHNESS_SECONDS
+    if stale:
+        print("building OpenAPI schema (needs the dev stack running) ...")
+        result = subprocess.run(["hogli", "build:openapi-schema"], cwd=REPO_ROOT, check=False)
+        if result.returncode != 0 or not OPENAPI_JSON.exists():
+            fail("could not build frontend/tmp/openapi.json — is the dev stack up? (`hogli start`)")
+    with OPENAPI_JSON.open() as f:
+        return json.load(f)
+
+
+def collect_refs(node: Any, refs: set[str]) -> None:
+    if isinstance(node, dict):
+        ref = node.get("$ref")
+        if isinstance(ref, str):
+            refs.add(ref)
+        for value in node.values():
+            collect_refs(value, refs)
+    elif isinstance(node, list):
+        for value in node:
+            collect_refs(value, refs)
+
+
+def schema_name(ref: str) -> str | None:
+    prefix = "#/components/schemas/"
+    return ref[len(prefix) :] if ref.startswith(prefix) else None
+
+
+def filter_openapi(spec: dict[str, Any], allowed_paths: list[str]) -> dict[str, Any]:
+    all_paths: dict[str, Any] = spec.get("paths", {})
+    picked_paths: dict[str, Any] = {}
+    missing: list[str] = []
+    for path in allowed_paths:
+        if path in all_paths:
+            picked_paths[path] = all_paths[path]
+        else:
+            missing.append(path)
+    if missing:
+        fail(f"allowlisted paths missing from the spec (renamed or removed upstream?): {missing}")
+
+    schemas: dict[str, Any] = spec.get("components", {}).get("schemas", {})
+    needed: set[str] = set()
+    frontier: set[str] = set()
+    collect_refs(picked_paths, frontier)
+    while frontier:
+        refs = frontier
+        frontier = set()
+        for ref in refs:
+            name = schema_name(ref)
+            if name is None or name in needed:
+                continue
+            if name not in schemas:
+                fail(f"referenced schema {name} missing from the spec")
+            needed.add(name)
+            collect_refs(schemas[name], frontier)
+
+    return {
+        "openapi": spec.get("openapi"),
+        "info": {"title": "PostHog API (iOS allowlisted subset)"},
+        "paths": picked_paths,
+        "components": {"schemas": {name: schemas[name] for name in sorted(needed)}},
+    }
+
+
+def filter_query_schema(allowed_kinds: list[str]) -> dict[str, Any]:
+    with QUERY_SCHEMA_JSON.open() as f:
+        schema = json.load(f)
+    definitions: dict[str, Any] = schema.get("definitions", {})
+    missing = [kind for kind in allowed_kinds if kind not in definitions]
+    if missing:
+        fail(f"allowlisted query kinds missing from schema.json: {missing}")
+
+    needed: set[str] = set()
+    frontier: set[str] = set(allowed_kinds)
+    while frontier:
+        names = frontier
+        frontier = set()
+        for name in names:
+            if name in needed:
+                continue
+            if name not in definitions:
+                fail(f"query schema definition {name} not found")
+            needed.add(name)
+            refs: set[str] = set()
+            collect_refs(definitions[name], refs)
+            for ref in refs:
+                prefix = "#/definitions/"
+                if ref.startswith(prefix):
+                    frontier.add(ref[len(prefix) :])
+
+    return {name: definitions[name] for name in sorted(needed)}
+
+
+def main() -> None:
+    with ENDPOINT_ALLOWLIST.open() as f:
+        allowed_paths = json.load(f)["paths"]
+    with KIND_ALLOWLIST.open() as f:
+        allowed_kinds = json.load(f)["kinds"]
+
+    spec = ensure_openapi_spec()
+    lock = {
+        "comment": "Generated by scripts/update-api-lock.py — do not edit by hand.",
+        "openapi": filter_openapi(spec, allowed_paths),
+        "queryKinds": filter_query_schema(allowed_kinds),
+    }
+    LOCK_PATH.write_text(json.dumps(lock, indent=2, sort_keys=True) + "\n")
+    path_count = len(lock["openapi"]["paths"])
+    schema_count = len(lock["openapi"]["components"]["schemas"])
+    kind_count = len(lock["queryKinds"])
+    print(
+        f"wrote {LOCK_PATH.relative_to(REPO_ROOT)}: {path_count} paths, "
+        f"{schema_count} schemas, {kind_count} query definitions"
+    )
+
+
+if __name__ == "__main__":
+    main()

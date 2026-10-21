@@ -20,6 +20,9 @@ packages:
     # products/desktop is a nested standalone workspace (own lockfile, catalog,
     # overrides, Node version); the root install must not absorb it.
     - '!products/desktop'
+    # products/ios is the native Swift app — no package.json today, but keep it
+    # out so a future scripts/package.json can never join the root install.
+    - '!products/ios'
     - docs/onboarding
     - services/agent-proxy
     - services/credentials-service

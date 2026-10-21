@@ -1,0 +1,40 @@
+name: iOS Promote
+
+# Manually promotes an already-uploaded TestFlight build to App Store review.
+# Human fallback: the same steps in the App Store Connect UI.
+on:
+    workflow_dispatch:
+        inputs:
+            version:
+                description: Marketing version to promote (e.g. 0.2.1, without the ios-v prefix)
+                required: true
+                type: string
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+    cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+    promote:
+        name: Submit to App Store review
+        runs-on: depot-ubuntu-24.04
+        timeout-minutes: 15
+        permissions:
+            contents: read
+        steps:
+            - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+              with:
+                  sparse-checkout: .github/scripts/ios
+                  sparse-checkout-cone-mode: false
+            - name: Install API client dependencies
+              run: pip install --user 'pyjwt[crypto]==2.10.1'
+            - name: Promote build
+              env:
+                  ASC_KEY_ID: ${{ secrets.IOS_ASC_API_KEY_ID }}
+                  ASC_ISSUER_ID: ${{ secrets.IOS_ASC_API_ISSUER_ID }}
+                  ASC_KEY_P8_B64: ${{ secrets.IOS_ASC_API_KEY_P8 }}
+                  VERSION: ${{ inputs.version }}
+                  BUNDLE_ID: com.posthog.ios
+              run: |
+                  export ASC_KEY_P8="$(echo "$ASC_KEY_P8_B64" | base64 -d)"
+                  python3 .github/scripts/ios/promote.py
