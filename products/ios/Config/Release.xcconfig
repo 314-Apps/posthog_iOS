@@ -1,3 +1,0 @@
-#include "Shared.xcconfig"
-
-POSTHOG_ENABLE_DEV_REGION = NO

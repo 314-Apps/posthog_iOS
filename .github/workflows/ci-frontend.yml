@@ -164,9 +164,6 @@ jobs:
                         - '!.github/workflows/desktop-*.yml'
                         - '!.github/actions/desktop-*/**'
                         - '!.github/scripts/desktop/**'
-                        # products/ios is the native Swift app; it has its own ios-* CI
-                        - '!products/ios/**'
-                        - '!.github/workflows/ios-*.yml'
                         # The personhog Python stubs sit under packages/ but no frontend code reads them
                         - '!packages/personhog-proto/**'
                         - 'playwright/**'
@@ -214,8 +211,6 @@ jobs:
                         # products/desktop is the imported desktop app; it has its own
                         # desktop-* CI and must not drag this suite onto its PRs
                         - '!products/desktop/**'
-                        # products/ios is the native Swift app; it has its own ios-* CI
-                        - '!products/ios/**'
                         # The personhog Python stubs sit under packages/ but no frontend code reads them
                         - '!packages/personhog-proto/**'
                         - 'playwright/**'

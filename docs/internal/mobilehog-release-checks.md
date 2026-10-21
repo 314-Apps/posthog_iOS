@@ -8,20 +8,13 @@ Keep the bundle ID and storage keys stable so updates preserve existing installa
 
 ## Updates
 
-OTA is configured and enabled in `products/desktop/apps/mobilehog/app.json`
-(`updates.enabled: true`, fingerprint `runtimeVersion`, Expo Updates URL for EAS project
-`d8e0731d-1107-4421-aa33-abf130eca27f`).
-Store and preview builds still ship a bundled JavaScript baseline; Settings > Check for updates
-fetches a compatible publish for that fingerprint.
+The app has its own EAS project ID, but over-the-air updates remain disabled.
+Store builds use the bundled JavaScript.
 
-Before distributing a build that relies on OTA:
-
-1. Install a preview binary from this EAS project (not `apps/mobile`).
-2. Publish a compatible update: `eas update --branch preview` from `products/desktop/apps/mobilehog`.
-3. Open Settings, apply the update, and confirm the new JS loads.
-4. A native-module change must produce a different fingerprint and require a new binary.
-
-Do not reuse the older mobile app's EAS project ID (`apps/mobile`).
+To enable updates, run `eas update:configure` from `products/desktop/apps/mobilehog` with access to the correct Expo organization.
+Check that `extra.eas.projectId` and `updates.url` refer to that project, then set `updates.enabled` to `true`.
+Build and install a new binary before publishing an update to its channel.
+Do not reuse the older mobile app's project ID.
 
 ## Account changes
 
@@ -57,19 +50,9 @@ The mobile app does not show space names in the drawer, search, composer, or Act
 
 ## Push notifications
 
-Task completion from Desktop or mobile uses the same server-side owner notification path. Delivery requires a signed-in account, permission to show notifications, an Expo push token registered with the server, and working iOS push credentials for the app's EAS project (`d8e0731d-1107-4421-aa33-abf130eca27f`).
-The app registers after sign-in (`usePushNotifications` in the root layout) and retries when it becomes active. Notification permissions stay in iOS settings. Expo push delivery can be tested on a supported iOS simulator or a physical device; it needs a push-enabled native build.
-Self-driving and task pushes also need the `posthog-code-mobile-push` feature flag on for the signed-in user.
-
-### Push end-to-end check (required before a shared build)
-
-1. Install a push-enabled preview/native build of `com.posthog.mobilehog` (not the older Code mobile app).
-2. Sign in, grant notification permission, confirm Settings still shows the signed-in project.
-3. Start a cloud task from Desktop for that account, put mobilehog in the background, and confirm the completion alert arrives and opens that task.
-4. With Self-driving reports available, confirm a "New report for you" or "PR ready to review" push opens the report.
-5. Server delivery metrics count Expo acceptance, not confirmed device delivery — treat a missing banner as a device/credential failure until the Expo receipt succeeds.
-
-Unit coverage for wiring lives in `products/desktop/apps/mobilehog/src/lib/pushWiring.test.ts`.
+Task completion from Desktop or mobile uses the same server-side owner notification path. Delivery requires a signed-in account, permission to show notifications, an Expo push token registered with the server, and working iOS push credentials for the app's EAS project.
+The app registers after sign-in and retries when it becomes active. Notification permissions stay in iOS settings. Expo push delivery can be tested on a supported iOS simulator or a physical device; it needs a push-enabled native build.
+To check cross-device delivery, start a cloud task from Desktop, put the mobile app in the background, and confirm that the completion alert arrives and opens that task. Server delivery metrics count Expo acceptance, not confirmed device delivery.
 
 Self-driving pushes use the same `posthog-code-mobile-push` flag as task pushes. A report first appearing sends "New report for you" to its suggested reviewers. A PR becoming open sends "PR ready to review" to the linked reports' active claimant and suggested reviewers, with one push per person when reports share the PR. Recipients must still have project access, and tapping either alert opens the report. Importing historical legacy assignments, including `backfill_report_pull_requests`, sends no PR-ready push.
 

@@ -1,8 +1,0 @@
-{
-  "results": [
-    {"action_id": "$pageview", "name": "$pageview", "custom_name": "Viewed pricing", "order": 0, "count": 21406, "average_conversion_time": null},
-    {"action_id": "user signed up", "name": "user signed up", "custom_name": null, "order": 1, "count": 11573, "average_conversion_time": 312.5},
-    {"action_id": "subscription started", "name": "subscription started", "custom_name": null, "order": 2, "count": 4918, "average_conversion_time": 86400.0}
-  ],
-  "timezone": "UTC"
-}

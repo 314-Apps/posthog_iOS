@@ -5,8 +5,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 export type CloudRegion = "us" | "eu";
 
-// v1 mobile's public OAuth clients. app.json registers both `mobilehog` and
-// `posthog` schemes so the existing cloud redirect (`posthog://callback`) works.
+// v1 mobile's public OAuth clients, registered for the posthog://callback scheme.
 const CLIENT_IDS: Record<CloudRegion, string> = {
   us: "a5TY7w9IjFYfes6dkPgZe6envclWw3bm2UD8ZTlm",
   eu: "1A7vO138Fh5sYmJislicN4F5HnttI6urmFttxPDU",

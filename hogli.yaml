@@ -610,15 +610,6 @@ build:
     unsync:skill:
         cmd: python -m products.posthog_ai.scripts.build_skills --sync --clean
         description: Remove a previously synced skill from .agents/skills/
-    ios:check-api:
-        cmd: python3 products/ios/scripts/check-api-drift.py
-        description: Check the iOS app's Swift API surface against its endpoint allowlist and lock
-    ios:update-api-lock:
-        cmd: python3 products/ios/scripts/update-api-lock.py
-        description: Refresh products/ios/openapi/api-lock.json from the dev stack's OpenAPI schema
-        services:
-            - postgresql
-            - clickhouse
 docker:
     docker:services:up:
         click: hogli_commands.devenv.cli:docker_services_up

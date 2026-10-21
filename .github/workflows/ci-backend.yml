@@ -212,8 +212,6 @@ jobs:
                         # products/desktop is the imported desktop app; it has its own
                         # desktop-* CI and must not drag this suite onto its PRs
                         - '!products/desktop/**'
-                        # products/ios is the native Swift app; it has its own ios-* CI
-                        - '!products/ios/**'
                         # Each product's package.json declares the per-product
                         # backend:test script that turbo-discover reads to
                         # compose the Product matrix. Without this entry,
