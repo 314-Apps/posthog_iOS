@@ -15,6 +15,7 @@ export const CAPABILITIES_CDP: PluginServerCapabilities = {
     cdpInternalEvents: true,
     cdpCyclotronWorker: true,
     cdpApi: true,
+    cdpSesWebhooks: true,
     appManagementSingleton: true,
     cdpDataWarehouseEvents: false, // Not yet fully developed - enable when ready
     cdpLegacyOnEvent: false, // most of the times not needed
@@ -120,6 +121,10 @@ export function getPluginServerCapabilities(
             return {
                 cdpInternalEvents: true,
             }
+        case PluginServerMode.cdp_ses_webhooks:
+            return {
+                cdpSesWebhooks: true,
+            }
         case PluginServerMode.cdp_cyclotron_worker:
             return {
                 cdpCyclotronWorker: true,
@@ -211,6 +216,9 @@ export function getPluginServerCapabilities(
         case PluginServerMode.recordings_blob_ingestion_v2_ml_image_scrub_dlq_replay:
         case PluginServerMode.recordings_blob_ingestion_v2_ml_image_fetch:
         case PluginServerMode.recordings_blob_ingestion_v2_ml_image_fetch_retry:
+        case PluginServerMode.ai_research_v4_image_fetch:
+        case PluginServerMode.ai_research_v4_image_fetch_retry:
+        case PluginServerMode.ai_research_v4_parquet_sink:
         case PluginServerMode.recording_api:
             throw new Error(`Mode ${mode} is handled by IngestionSessionReplayServer, not PluginServer`)
     }

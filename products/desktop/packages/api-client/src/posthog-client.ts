@@ -57,6 +57,8 @@ import type {
   SignalReportArtefact,
   SignalReportArtefactsResponse,
   SignalReportRefundReason,
+  SignalReportSectionCounts,
+  SignalReportSectionCountsParams,
   SignalReportSignalsResponse,
   SignalReportStatus,
   SignalReportsQueryParams,
@@ -445,6 +447,14 @@ export interface TaskSessionStorageAccess {
  */
 export const COMMENT_SCOPES = ["task_artifact", "canvas", "task"] as const;
 export type CommentScope = (typeof COMMENT_SCOPES)[number];
+
+export type SuggestedReviewerEdit = {
+  action: Extract<
+    NonNullable<Schemas.SignalReportArtefactWrite["action"]>,
+    "add" | "remove"
+  >;
+  targets: NonNullable<Schemas.SignalReportArtefactWrite["targets"]>;
+};
 
 /** Named `Resource*` so it never collides with the DOM's global `Comment`.
  * Optimistic rows do not have a server version yet, while item_context is a
@@ -2143,6 +2153,7 @@ export class PostHogAPIClient {
         appVersion: options.appVersion ?? clientAppVersion,
         fetch: options.fetch,
         userAgent: options.userAgent,
+        taskClientProvenance: this.taskClientProvenance,
       }),
       baseUrl,
     );
@@ -4615,11 +4626,6 @@ export class PostHogAPIClient {
         method: "post",
         url,
         path: urlPath,
-        parameters: {
-          header: {
-            "X-PostHog-Client-Provenance": this.taskClientProvenance,
-          },
-        },
         overrides: {
           body: JSON.stringify({
             repository: options.repository,
@@ -5445,23 +5451,37 @@ export class PostHogAPIClient {
 
   async getGithubRepositories(
     integrationId: string | number,
+    signal?: AbortSignal,
   ): Promise<string[]> {
     const repositories: string[] = [];
     let offset = 0;
 
     while (true) {
-      const page = await this.getGithubRepositoriesPage(
-        integrationId,
-        offset,
-        500,
-      );
-      repositories.push(...page.repositories);
+      const controller = new AbortController();
+      const requestSignal = signal
+        ? AbortSignal.any([signal, controller.signal])
+        : controller.signal;
+      const timeout = setTimeout(() => controller.abort(), 15_000);
 
-      if (!page.hasMore) {
-        return repositories;
+      try {
+        requestSignal.throwIfAborted();
+        const page = await this.getGithubRepositoriesPage(
+          integrationId,
+          offset,
+          500,
+          undefined,
+          requestSignal,
+        );
+        repositories.push(...page.repositories);
+
+        if (!page.hasMore) {
+          return repositories;
+        }
+
+        offset += page.repositories.length;
+      } finally {
+        clearTimeout(timeout);
       }
-
-      offset += page.repositories.length;
     }
   }
 
@@ -5470,6 +5490,7 @@ export class PostHogAPIClient {
     offset: number,
     limit: number,
     search?: string,
+    signal?: AbortSignal,
   ): Promise<{
     repositories: string[];
     hasMore: boolean;
@@ -5488,6 +5509,7 @@ export class PostHogAPIClient {
       method: "get",
       url,
       path: `/api/environments/${teamId}/integrations/${integrationId}/github_repos/`,
+      overrides: { signal },
     });
 
     if (!response.ok) {
@@ -5571,25 +5593,38 @@ export class PostHogAPIClient {
 
   async refreshGithubRepositories(
     integrationId: string | number,
+    signal?: AbortSignal,
   ): Promise<string[]> {
     const teamId = await this.getTeamId();
     const url = new URL(
       `${this.api.baseUrl}/api/environments/${teamId}/integrations/${integrationId}/github_repos/refresh/`,
     );
-    const response = await this.api.fetcher.fetch({
-      method: "post",
-      url,
-      path: `/api/environments/${teamId}/integrations/${integrationId}/github_repos/refresh/`,
-    });
+    const controller = new AbortController();
+    const requestSignal = signal
+      ? AbortSignal.any([signal, controller.signal])
+      : controller.signal;
+    const timeout = setTimeout(() => controller.abort(), 60_000);
 
-    if (!response.ok) {
-      throw new Error(
-        `Failed to refresh GitHub repositories: ${response.statusText}`,
-      );
+    try {
+      requestSignal.throwIfAborted();
+      const response = await this.api.fetcher.fetch({
+        method: "post",
+        url,
+        path: `/api/environments/${teamId}/integrations/${integrationId}/github_repos/refresh/`,
+        overrides: { signal: requestSignal },
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to refresh GitHub repositories: ${response.statusText}`,
+        );
+      }
+
+      const data: unknown = await response.json();
+      return this.normalizeGithubRepositories(data);
+    } finally {
+      clearTimeout(timeout);
     }
-
-    const data: unknown = await response.json();
-    return this.normalizeGithubRepositories(data);
   }
 
   async refreshGithubUserRepositories(
@@ -5840,6 +5875,29 @@ export class PostHogAPIClient {
       results: data.results ?? [],
       count: data.count ?? data.results?.length ?? 0,
     };
+  }
+
+  async getSignalReportSectionCounts(
+    params?: SignalReportSectionCountsParams,
+  ): Promise<SignalReportSectionCounts> {
+    const teamId = await this.getTeamId();
+    const path = `/api/projects/${teamId}/signals/reports/section_counts/`;
+    const url = new URL(`${this.api.baseUrl}${path}`);
+    if (params?.source_product) {
+      url.searchParams.set("source_product", params.source_product);
+    }
+    if (params?.priority) url.searchParams.set("priority", params.priority);
+    if (params?.suggested_reviewers) {
+      url.searchParams.set("suggested_reviewers", params.suggested_reviewers);
+    }
+
+    const response = await this.api.fetcher.fetch({ method: "get", url, path });
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch signal report section counts: ${response.statusText}`,
+      );
+    }
+    return (await response.json()) as SignalReportSectionCounts;
   }
 
   async getSignalProcessingState(): Promise<SignalProcessingStateResponse> {
@@ -6101,6 +6159,36 @@ export class PostHogAPIClient {
   }
 
   /**
+   * Take over the claim another person holds on a report. `claimId` names the
+   * claim the user confirmed, so the server refuses when a newer claim replaced
+   * it, and it notifies the person who held it.
+   */
+  async takeOverSignalReportClaim(
+    reportId: string,
+    claimId: string | null,
+  ): Promise<SignalReport> {
+    const teamId = await this.getTeamId();
+    const path = `/api/projects/${teamId}/signals/reports/${reportId}/claim/`;
+    const response = await this.api.fetcher.fetch({
+      method: "post",
+      url: new URL(`${this.api.baseUrl}${path}`),
+      path,
+      overrides: {
+        body: JSON.stringify(
+          claimId
+            ? { takeover: true, takeover_claim_id: claimId }
+            : { takeover: true },
+        ),
+      },
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || "Failed to take over the report");
+    }
+    return (await response.json()) as SignalReport;
+  }
+
+  /**
    * Refund a report's billed PR. The server freezes the billing path, archives
    * the report, and kicks off the billing credit when one is due; it also
    * enforces eligibility, so callers only gate for display.
@@ -6145,6 +6233,7 @@ export class PostHogAPIClient {
     reportId: string,
     artefactId: string,
     content: SuggestedReviewerWriteEntry[],
+    edit: SuggestedReviewerEdit,
   ): Promise<SuggestedReviewersArtefact> {
     const teamId = await this.getTeamId();
     const url = new URL(
@@ -6157,7 +6246,7 @@ export class PostHogAPIClient {
       url,
       path,
       overrides: {
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, ...edit }),
       },
     });
 
@@ -6176,6 +6265,7 @@ export class PostHogAPIClient {
   async setSignalReportReviewers(
     reportId: string,
     content: SuggestedReviewerWriteEntry[],
+    edit: SuggestedReviewerEdit,
   ): Promise<SuggestedReviewersArtefact> {
     const teamId = await this.getTeamId();
     const path = `/api/projects/${teamId}/signals/reports/${reportId}/reviewers/`;
@@ -6185,7 +6275,7 @@ export class PostHogAPIClient {
       url,
       path,
       overrides: {
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, ...edit }),
       },
     });
 

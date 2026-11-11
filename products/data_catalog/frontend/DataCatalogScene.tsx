@@ -1,13 +1,15 @@
 import { BindLogic, useActions, useValues } from 'kea'
-import { useMemo } from 'react'
+import { router } from 'kea-router'
+import { Suspense, useMemo } from 'react'
 
 import { IconPlus, IconPlusSmall } from '@posthog/icons'
 import { LemonButton } from '@posthog/lemon-ui'
-import { Button } from '@posthog/quill'
+import { Button, Spinner } from '@posthog/quill'
 
 import { useFeatureFlag } from 'lib/hooks/useFeatureFlag'
 import { LemonBadge } from 'lib/lemon-ui/LemonBadge'
 import { LemonTab, LemonTabs } from 'lib/lemon-ui/LemonTabs'
+import { lazyWithRetry } from 'lib/utils/retryImport'
 import { SceneExport } from 'scenes/sceneTypes'
 import { urls } from 'scenes/urls'
 
@@ -17,7 +19,6 @@ import { ProductKey } from '~/queries/schema/schema-general'
 import { useSceneAgentPanel } from '~/scenes/max/useSceneAgentPanel'
 
 import { certificationsLogic } from './certificationsLogic'
-import { NewMetricModal } from './components/NewMetricModal'
 import { buildDataCatalogAgentContext, DATA_CATALOG_AGENT_HEADLINES } from './dataCatalogAgentContext'
 import { DataCatalogTab, dataCatalogSceneLogic } from './dataCatalogSceneLogic'
 import { dataCatalogEmptyState } from './emptyState/dataCatalogEmptyState'
@@ -26,6 +27,10 @@ import { relationshipsLogic } from './relationshipsLogic'
 import { CertificationsTab } from './tabs/CertificationsTab'
 import { MetricsTab } from './tabs/MetricsTab'
 import { RelationshipsTab } from './tabs/RelationshipsTab'
+
+const DataCatalogSections = lazyWithRetry(() =>
+    import('./DataCatalogSections').then((module) => ({ default: module.DataCatalogSections }))
+)
 
 export const scene: SceneExport = {
     component: DataCatalogScene,
@@ -44,12 +49,11 @@ function TabLabel({ label, count }: { label: string; count: number }): JSX.Eleme
 }
 
 export function DataCatalogScene(): JSX.Element {
-    const { activeTab } = useValues(dataCatalogSceneLogic)
+    const { activeTab, restructureEnabled } = useValues(dataCatalogSceneLogic)
     const { setActiveTab } = useActions(dataCatalogSceneLogic)
     const { proposedCount: metricsPending } = useValues(metricsLogic)
     const { pendingCount: relationshipsPending } = useValues(relationshipsLogic)
     const { proposedCount: certificationsPending } = useValues(certificationsLogic)
-    const { openNewMetricModal: openMetricModal } = useActions(metricsLogic)
     const contextItems = useMemo(() => buildDataCatalogAgentContext(activeTab), [activeTab])
     const todayRailNav = useFeatureFlag('TODAY_RAIL_NAV')
 
@@ -58,6 +62,16 @@ export function DataCatalogScene(): JSX.Element {
         contextItems,
         headlines: DATA_CATALOG_AGENT_HEADLINES,
     })
+
+    if (restructureEnabled) {
+        return (
+            <BindLogic logic={metricsLogic} props={{}}>
+                <Suspense fallback={<Spinner />}>
+                    <DataCatalogSections />
+                </Suspense>
+            </BindLogic>
+        )
+    }
 
     const tabs: LemonTab<DataCatalogTab>[] = [
         {
@@ -85,13 +99,13 @@ export function DataCatalogScene(): JSX.Element {
             <SceneContent>
                 <SceneTitleSection
                     name="Data catalog"
-                    description="Review and manage governed metrics, certifications, and relationships for your data."
+                    description="Define each metric once. PostHog AI and agents compute it from the definition you approve here."
                     resourceType={{ type: 'data_warehouse' }}
                     actions={
                         todayRailNav ? (
                             <Button
                                 variant="primary"
-                                onClick={openMetricModal}
+                                onClick={() => router.actions.push(urls.dataCatalogNewMetric())}
                                 data-attr="data-catalog-new-metric-button"
                             >
                                 <IconPlus />
@@ -102,7 +116,7 @@ export function DataCatalogScene(): JSX.Element {
                                 type="primary"
                                 size="small"
                                 icon={<IconPlusSmall />}
-                                onClick={openMetricModal}
+                                to={urls.dataCatalogNewMetric()}
                                 data-attr="data-catalog-new-metric-button"
                             >
                                 New metric
@@ -117,7 +131,6 @@ export function DataCatalogScene(): JSX.Element {
                     tabs={tabs}
                     sceneInset
                 />
-                <NewMetricModal />
             </SceneContent>
         </BindLogic>
     )

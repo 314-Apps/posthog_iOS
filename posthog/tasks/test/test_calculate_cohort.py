@@ -601,10 +601,7 @@ def calculate_cohort_test_factory(event_factory: Callable, person_factory: Calla
             reset_stuck_cohorts()
 
             stuck_static_cohort.refresh_from_db()
-            # Should NOT be picked up because errors_calculating is at the max
-            self.assertTrue(stuck_static_cohort.is_calculating)
-
-            # Verify insert_cohort_from_query was NOT called
+            self.assertFalse(stuck_static_cohort.is_calculating)
             mock_insert_cohort_from_query.delay.assert_not_called()
 
         @patch("posthog.tasks.calculate_cohort.increment_version_and_enqueue_calculate_cohort")
@@ -1680,18 +1677,20 @@ class TestCohortCalculationTasks(APIBaseTest):
         task.push_request(retries=0, called_directly=False, is_eager=True)
         try:
             with (
-                patch(ch_insert_path),
+                patch(ch_insert_path, return_value=7),
                 patch(PG_SYNC_PATH, side_effect=_rpc_error(grpc.StatusCode.UNAVAILABLE)),
                 self.assertRaises(Retry) as scheduled,
             ):
                 task.run(cohort.id, self.team.pk)
 
-            with patch(ch_insert_path) as mock_insert_ch, patch(PG_SYNC_PATH):
+            with patch(ch_insert_path) as mock_insert_ch, patch(PG_SYNC_PATH) as mock_sync:
                 task.run(cohort.id, self.team.pk, **scheduled.exception.sig.kwargs)
         finally:
             task.pop_request()
 
         mock_insert_ch.assert_not_called()
+        # The retry still has to wait for the rows the first attempt wrote, or a lagging replica reads as empty.
+        self.assertEqual(mock_sync.call_args.kwargs["min_rows"], 7)
 
     @parameterized.expand(
         [

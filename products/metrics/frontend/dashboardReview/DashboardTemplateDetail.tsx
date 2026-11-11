@@ -5,7 +5,7 @@ import { LemonBanner, LemonButton, LemonCollapse, LemonSkeleton, LemonTag } from
 
 import { useFeatureFlag } from 'lib/hooks/useFeatureFlag'
 import { cn } from 'lib/utils/css-classes'
-import { inStorybook, inStorybookTestRunner } from 'lib/utils/dom'
+import { inStorybook } from 'lib/utils/dom'
 import { Dashboard } from 'scenes/dashboard/Dashboard'
 import { dashboardLogic } from 'scenes/dashboard/dashboardLogic'
 import { DashboardLoadAction } from 'scenes/dashboard/dashboardLogic'
@@ -43,10 +43,9 @@ function PreviewDashboard({ dashboardId }: { dashboardId: number }): JSX.Element
 }
 
 export function DashboardTemplateDetail(): JSX.Element {
-    const { template, templateLoading, previewDashboardId, previewLoading, previewError, reviewable } = useValues(
-        metricsDashboardReviewSceneLogic
-    )
-    const { approveTemplate, rejectTemplate } = useActions(metricsDashboardReviewSceneLogic)
+    const { template, templateLoading, previewDashboardId, previewLoading, previewError, reviewable, regenerable } =
+        useValues(metricsDashboardReviewSceneLogic)
+    const { approveTemplate, rejectTemplate, confirmRegenerate } = useActions(metricsDashboardReviewSceneLogic)
     const { openSidePanel } = useActions(sidePanelStateLogic)
     const { dataProcessingAccepted, dataProcessingApprovalDisabledReason } = useValues(maxGlobalLogic)
     const todayRailNav = useFeatureFlag('TODAY_RAIL_NAV')
@@ -97,12 +96,23 @@ export function DashboardTemplateDetail(): JSX.Element {
                                 <span
                                     className={cn(
                                         'rainbow-text font-semibold',
-                                        !(inStorybook() || inStorybookTestRunner()) && 'rainbow-text-animating'
+                                        !inStorybook() && 'rainbow-text-animating'
                                     )}
                                 >
                                     Edit with PostHog AI
                                 </span>
                             </LemonButton>
+                            {regenerable && (
+                                <LemonButton
+                                    type="secondary"
+                                    size="small"
+                                    onClick={confirmRegenerate}
+                                    loading={templateLoading}
+                                    data-attr="metrics-dashboard-review-regenerate"
+                                >
+                                    Regenerate
+                                </LemonButton>
+                            )}
                             {reviewable && template.status !== 'rejected' && (
                                 <LemonButton
                                     type="secondary"
