@@ -108,6 +108,8 @@ export const AiObservabilityOfflineExperimentsListQueryParams = () => zod.object
         .max(aiObservabilityOfflineExperimentsListQueryApplicationVersionMax)
         .optional()
         .describe('Exact application revision.'),
+    created_by: zod.number().min(1).optional().describe("Filter experiments by the author's user ID."),
+    created_by_is_null: zod.boolean().optional().describe('Only include experiments without an author.'),
     cursor: zod
         .string()
         .min(1)
@@ -530,6 +532,8 @@ export const AiObservabilityOfflineExperimentsUploadCreateParams = () => zod.obj
         ),
 })
 
+export const aiObservabilityOfflineExperimentsUploadCreateBodyItemsItemModelVersionMax = 255
+
 export const aiObservabilityOfflineExperimentsUploadCreateBodyItemsItemCaseKeyMax = 255
 
 export const aiObservabilityOfflineExperimentsUploadCreateBodyItemsItemTrialMax = 255
@@ -557,6 +561,11 @@ export const AiObservabilityOfflineExperimentsUploadCreateBody = () => zod.objec
                 id: zod
                     .string()
                     .describe('Caller-generated UUID for one input\/output execution. Reuse for exact retries.'),
+                model_version: zod
+                    .string()
+                    .max(aiObservabilityOfflineExperimentsUploadCreateBodyItemsItemModelVersionMax)
+                    .nullish()
+                    .describe("Model used for this item. Omitted or null values inherit the experiment's model."),
                 case_key: zod
                     .string()
                     .max(aiObservabilityOfflineExperimentsUploadCreateBodyItemsItemCaseKeyMax)
@@ -737,6 +746,14 @@ export const AiObservabilityOfflineScorersHistoryListQueryParams = () => zod.obj
         .max(aiObservabilityOfflineScorersHistoryListQueryApplicationVersionMax)
         .optional()
         .describe('Exact application revision.'),
+    breakdown: zod
+        .enum(['model_version', 'prompt_version', 'application_version', 'suite_key', 'run_source'])
+        .optional()
+        .describe(
+            "Split history by this property. Model uses each item's model, falling back to the experiment's model.\n\n\* `model_version` - Model\n\* `prompt_version` - Prompt version\n\* `application_version` - Application version\n\* `suite_key` - Suite\n\* `run_source` - Run source"
+        ),
+    created_by: zod.number().min(1).optional().describe("Filter experiments by the author's user ID."),
+    created_by_is_null: zod.boolean().optional().describe('Only include experiments without an author.'),
     cursor: zod
         .string()
         .min(1)
@@ -843,6 +860,7 @@ export const DatasetItemsListParams = () => zod.object({
 })
 
 export const datasetItemsListQueryArchivedDefault = false
+export const datasetItemsListQueryLimitMax = 25
 
 export const DatasetItemsListQueryParams = () => zod.object({
     archived: zod
@@ -850,7 +868,7 @@ export const DatasetItemsListQueryParams = () => zod.object({
         .default(datasetItemsListQueryArchivedDefault)
         .describe('Return archived items instead of active items.'),
     dataset: zod.string().describe('Dataset whose items should be returned.'),
-    limit: zod.number().optional().describe('Number of results to return per page.'),
+    limit: zod.number().max(datasetItemsListQueryLimitMax).optional().describe('Number of results to return per page.'),
     offset: zod.number().optional().describe('The initial index from which to return the results.'),
     revision: zod.number().min(1).optional().describe('Return the exact dataset snapshot at this revision.'),
 })
@@ -1037,8 +1055,14 @@ export const DatasetItemsVersionsListParams = () => zod.object({
         ),
 })
 
+export const datasetItemsVersionsListQueryLimitMax = 100
+
 export const DatasetItemsVersionsListQueryParams = () => zod.object({
-    limit: zod.number().optional().describe('Number of results to return per page.'),
+    limit: zod
+        .number()
+        .max(datasetItemsVersionsListQueryLimitMax)
+        .optional()
+        .describe('Number of results to return per page.'),
     offset: zod.number().optional().describe('The initial index from which to return the results.'),
 })
 
@@ -1056,6 +1080,8 @@ export const DatasetsListParams = () => zod.object({
 export const datasetsListQueryArchivedDefault = false
 export const datasetsListQueryIdInMax = 100
 
+export const datasetsListQueryLimitMax = 100
+
 export const datasetsListQueryOrderByDefault = `-created_at`
 
 export const datasetsListQueryTagMatchDefault = `any`
@@ -1071,7 +1097,7 @@ export const DatasetsListQueryParams = () => zod.object({
         .max(datasetsListQueryIdInMax)
         .optional()
         .describe('Filter to these dataset IDs. Repeat the parameter or pass one comma-separated list, up to 100 IDs.'),
-    limit: zod.number().optional().describe('Number of results to return per page.'),
+    limit: zod.number().max(datasetsListQueryLimitMax).optional().describe('Number of results to return per page.'),
     offset: zod.number().optional().describe('The initial index from which to return the results.'),
     order_by: zod
         .string()
@@ -1223,8 +1249,14 @@ export const DatasetsRevisionsListParams = () => zod.object({
         ),
 })
 
+export const datasetsRevisionsListQueryLimitMax = 100
+
 export const DatasetsRevisionsListQueryParams = () => zod.object({
-    limit: zod.number().optional().describe('Number of results to return per page.'),
+    limit: zod
+        .number()
+        .max(datasetsRevisionsListQueryLimitMax)
+        .optional()
+        .describe('Number of results to return per page.'),
     offset: zod.number().optional().describe('The initial index from which to return the results.'),
 })
 
@@ -1360,6 +1392,9 @@ export const EvaluationsCreateParams = () => zod.object({
 export const evaluationsCreateBodyNameMax = 400
 
 export const evaluationsCreateBodyEvaluationConfigThreeSourceDefault = `user_messages`
+export const evaluationsCreateBodyOutputConfigDecisionThresholdMin = 0
+export const evaluationsCreateBodyOutputConfigDecisionThresholdMax = 1
+
 export const evaluationsCreateBodyOutputConfigStepExclusiveMin = 0
 
 export const evaluationsCreateBodyOutputConfigOptionsItemKeyMax = 128
@@ -1415,6 +1450,13 @@ export const EvaluationsCreateBody = () => zod
                         .enum(['llm', 'decision'])
                         .nullish()
                         .describe('Judge method. Omit to keep the saved method; null restores automatic routing.'),
+                    include_media: zod.boolean().optional().describe('Set to false to judge text only.'),
+                    reasoning_level: zod
+                        .enum(['minimal', 'low', 'medium', 'high'])
+                        .nullish()
+                        .describe(
+                            "How much the judge model reasons before it answers. Only Anthropic and OpenAI reasoning models with the 'llm' judge method support it. Omit to keep the saved level; null uses the model's default."
+                        ),
                 }),
                 zod.object({
                     source: zod
@@ -1456,6 +1498,14 @@ export const EvaluationsCreateBody = () => zod
                     .optional()
                     .describe(
                         'Boolean output only. Omit for numeric, categorical, and sentiment output. Whether a true result means the evaluation found a problem. False (the default) suits pass\/fail evaluations, where a true result satisfied the criteria. Set it to true for detector-style evaluations, so a true result is counted and labeled as a fail.'
+                    ),
+                decision_threshold: zod
+                    .number()
+                    .min(evaluationsCreateBodyOutputConfigDecisionThresholdMin)
+                    .max(evaluationsCreateBodyOutputConfigDecisionThresholdMax)
+                    .nullish()
+                    .describe(
+                        'Boolean decision-model judges only. Minimum probability of true required for a true result, inclusive. Omit or set null to use 0.5. Applies to new runs; historical results are unchanged.'
                     ),
                 min: zod
                     .number()
@@ -1528,7 +1578,7 @@ export const EvaluationsCreateBody = () => zod
             })
             .optional()
             .describe(
-                "Output config. For 'boolean' output_type: {allows_na} to permit N\/A results, and {true_is_failure} to declare that a true result means the evaluation found a problem. For 'numeric': only min\/max\/step, allows_na, and passing_rule {operator: 'gte'|'lte', threshold}. For 'categorical': options [{key, label}], selection_mode (single or multiple), allows_na, and optional passing_rule {categories: [key]}. Do not send true_is_failure for numeric or categorical output. For 'sentiment': {}."
+                "Output config. For 'boolean' output_type: {allows_na} to permit N\/A results, and {true_is_failure} to declare that a true result means the evaluation found a problem. For boolean decision-model judges, decision_threshold is a probability from 0 to 1 (default 0.5). For 'numeric': only min\/max\/step, allows_na, and passing_rule {operator: 'gte'|'lte', threshold}. For 'categorical': options [{key, label}], selection_mode (single or multiple), allows_na, and optional passing_rule {categories: [key]}. Do not send true_is_failure for numeric or categorical output. For 'sentiment': {}."
             ),
         conditions: zod
             .array(
@@ -1823,6 +1873,9 @@ export const EvaluationsPartialUpdateParams = () => zod.object({
 export const evaluationsPartialUpdateBodyNameMax = 400
 
 export const evaluationsPartialUpdateBodyEvaluationConfigThreeSourceDefault = `user_messages`
+export const evaluationsPartialUpdateBodyOutputConfigDecisionThresholdMin = 0
+export const evaluationsPartialUpdateBodyOutputConfigDecisionThresholdMax = 1
+
 export const evaluationsPartialUpdateBodyOutputConfigStepExclusiveMin = 0
 
 export const evaluationsPartialUpdateBodyOutputConfigOptionsItemKeyMax = 128
@@ -1879,6 +1932,13 @@ export const EvaluationsPartialUpdateBody = () => zod
                         .enum(['llm', 'decision'])
                         .nullish()
                         .describe('Judge method. Omit to keep the saved method; null restores automatic routing.'),
+                    include_media: zod.boolean().optional().describe('Set to false to judge text only.'),
+                    reasoning_level: zod
+                        .enum(['minimal', 'low', 'medium', 'high'])
+                        .nullish()
+                        .describe(
+                            "How much the judge model reasons before it answers. Only Anthropic and OpenAI reasoning models with the 'llm' judge method support it. Omit to keep the saved level; null uses the model's default."
+                        ),
                 }),
                 zod.object({
                     source: zod
@@ -1921,6 +1981,14 @@ export const EvaluationsPartialUpdateBody = () => zod
                     .optional()
                     .describe(
                         'Boolean output only. Omit for numeric, categorical, and sentiment output. Whether a true result means the evaluation found a problem. False (the default) suits pass\/fail evaluations, where a true result satisfied the criteria. Set it to true for detector-style evaluations, so a true result is counted and labeled as a fail.'
+                    ),
+                decision_threshold: zod
+                    .number()
+                    .min(evaluationsPartialUpdateBodyOutputConfigDecisionThresholdMin)
+                    .max(evaluationsPartialUpdateBodyOutputConfigDecisionThresholdMax)
+                    .nullish()
+                    .describe(
+                        'Boolean decision-model judges only. Minimum probability of true required for a true result, inclusive. Omit or set null to use 0.5. Applies to new runs; historical results are unchanged.'
                     ),
                 min: zod
                     .number()
@@ -1993,7 +2061,7 @@ export const EvaluationsPartialUpdateBody = () => zod
             })
             .optional()
             .describe(
-                "Output config. For 'boolean' output_type: {allows_na} to permit N\/A results, and {true_is_failure} to declare that a true result means the evaluation found a problem. For 'numeric': only min\/max\/step, allows_na, and passing_rule {operator: 'gte'|'lte', threshold}. For 'categorical': options [{key, label}], selection_mode (single or multiple), allows_na, and optional passing_rule {categories: [key]}. Do not send true_is_failure for numeric or categorical output. For 'sentiment': {}."
+                "Output config. For 'boolean' output_type: {allows_na} to permit N\/A results, and {true_is_failure} to declare that a true result means the evaluation found a problem. For boolean decision-model judges, decision_threshold is a probability from 0 to 1 (default 0.5). For 'numeric': only min\/max\/step, allows_na, and passing_rule {operator: 'gte'|'lte', threshold}. For 'categorical': options [{key, label}], selection_mode (single or multiple), allows_na, and optional passing_rule {categories: [key]}. Do not send true_is_failure for numeric or categorical output. For 'sentiment': {}."
             ),
         conditions: zod
             .array(
@@ -2131,7 +2199,23 @@ export const EvaluationsTestHogCreateParams = () => zod.object({
         ),
 })
 
+export const evaluationsTestHogCreateBodyConditionsItemIdMax = 100
+
+export const evaluationsTestHogCreateBodyConditionsItemRolloutPercentageDefault = 100
+export const evaluationsTestHogCreateBodyConditionsItemRolloutPercentageMin = 0
+export const evaluationsTestHogCreateBodyConditionsItemRolloutPercentageMax = 100
+
+export const evaluationsTestHogCreateBodyTargetDefault = `generation`
+export const evaluationsTestHogCreateBodyTargetConfigOneWindowSecondsMin = 10
+export const evaluationsTestHogCreateBodyTargetConfigOneWindowSecondsMax = 604800
+
+export const evaluationsTestHogCreateBodyTargetConfigOneQuietPeriodSecondsMin = 10
+export const evaluationsTestHogCreateBodyTargetConfigOneQuietPeriodSecondsMax = 86400
+
 export const evaluationsTestHogCreateBodyOutputTypeDefault = `boolean`
+export const evaluationsTestHogCreateBodyOutputConfigDecisionThresholdMin = 0
+export const evaluationsTestHogCreateBodyOutputConfigDecisionThresholdMax = 1
+
 export const evaluationsTestHogCreateBodyOutputConfigStepExclusiveMin = 0
 
 export const evaluationsTestHogCreateBodyOutputConfigOptionsItemKeyMax = 128
@@ -2145,151 +2229,197 @@ export const evaluationsTestHogCreateBodySampleCountDefault = 5
 export const evaluationsTestHogCreateBodySampleCountMax = 10
 
 export const evaluationsTestHogCreateBodyAllowsNaDefault = false
-export const evaluationsTestHogCreateBodyTargetDefault = `generation`
-export const evaluationsTestHogCreateBodyTargetConfigOneWindowSecondsDefault = 1800
-export const evaluationsTestHogCreateBodyTargetConfigOneWindowSecondsMin = 10
-export const evaluationsTestHogCreateBodyTargetConfigOneWindowSecondsMax = 7200
+export const evaluationsTestHogCreateBodySampleIdsItemMax = 400
 
-export const evaluationsTestHogCreateBodyTargetConfigOneQuietPeriodSecondsDefault = 3600
-export const evaluationsTestHogCreateBodyTargetConfigOneQuietPeriodSecondsMin = 10
-export const evaluationsTestHogCreateBodyTargetConfigOneQuietPeriodSecondsMax = 86400
+export const evaluationsTestHogCreateBodySampleIdsMax = 10
 
-export const EvaluationsTestHogCreateBody = () => zod.object({
-    output_type: zod
-        .enum(['boolean', 'numeric', 'categorical'])
-        .describe('\* `boolean` - Boolean (Pass\/Fail)\n\* `numeric` - Numeric\n\* `categorical` - Categorical')
-        .default(evaluationsTestHogCreateBodyOutputTypeDefault)
-        .describe(
-            'Expected output: boolean, numeric, or categorical. Sentiment is not supported by Hog.\n\n\* `boolean` - Boolean (Pass\/Fail)\n\* `numeric` - Numeric\n\* `categorical` - Categorical'
-        ),
-    output_config: zod
-        .object({
-            allows_na: zod
-                .boolean()
-                .optional()
-                .describe('Whether the evaluation can return N\/A for non-applicable generations.'),
-            true_is_failure: zod
-                .boolean()
-                .optional()
-                .describe(
-                    'Boolean output only. Omit for numeric, categorical, and sentiment output. Whether a true result means the evaluation found a problem. False (the default) suits pass\/fail evaluations, where a true result satisfied the criteria. Set it to true for detector-style evaluations, so a true result is counted and labeled as a fail.'
-                ),
-            min: zod
-                .number()
-                .nullish()
-                .describe(
-                    'Inclusive minimum numeric score. Omit for no lower bound. Required for numeric decision models.'
-                ),
-            max: zod
-                .number()
-                .nullish()
-                .describe(
-                    'Inclusive maximum numeric score. Omit for no upper bound. Required for numeric decision models and must exceed min.'
-                ),
-            step: zod
-                .number()
-                .gt(evaluationsTestHogCreateBodyOutputConfigStepExclusiveMin)
-                .nullish()
-                .describe('Optional positive input increment. Does not round evaluation results.'),
-            options: zod
-                .array(
-                    zod.object({
-                        key: zod
+export const EvaluationsTestHogCreateBody = () => zod
+    .object({
+        conditions: zod
+            .array(
+                zod
+                    .object({
+                        id: zod
                             .string()
-                            .min(1)
-                            .max(evaluationsTestHogCreateBodyOutputConfigOptionsItemKeyMax)
-                            .regex(evaluationsTestHogCreateBodyOutputConfigOptionsItemKeyRegExp)
-                            .describe('Stable category key.'),
-                        label: zod
-                            .string()
-                            .min(1)
-                            .max(evaluationsTestHogCreateBodyOutputConfigOptionsItemLabelMax)
-                            .describe('Category display label.'),
-                    })
-                )
-                .min(1)
-                .max(evaluationsTestHogCreateBodyOutputConfigOptionsMax)
-                .optional()
-                .describe('Categorical output options. Keys identify stored results; labels are displayed to users.'),
-            selection_mode: zod
-                .enum(['single', 'multiple'])
-                .optional()
-                .describe(
-                    'Select one category or multiple categories. Multiple selection allows an empty result. Defaults to single.'
-                ),
-            passing_rule: zod
-                .union([
-                    zod.object({
-                        operator: zod
-                            .enum(['gte', 'lte'])
-                            .describe('Pass at or above (gte), or at or below (lte), the threshold.'),
-                        threshold: zod
+                            .max(evaluationsTestHogCreateBodyConditionsItemIdMax)
+                            .optional()
+                            .describe('Identifier of this condition set, if any.'),
+                        rollout_percentage: zod
                             .number()
-                            .describe('Finite passing threshold within any configured score bounds.'),
-                    }),
-                    zod.object({
-                        categories: zod
-                            .array(zod.string())
+                            .min(evaluationsTestHogCreateBodyConditionsItemRolloutPercentageMin)
+                            .max(evaluationsTestHogCreateBodyConditionsItemRolloutPercentageMax)
+                            .default(evaluationsTestHogCreateBodyConditionsItemRolloutPercentageDefault)
                             .describe(
-                                'Passing category keys. With keys selected, results must be non-empty and contain only these keys. If no passing keys are selected, only an empty result passes.'
+                                'Percentage (0-100) of matching events to sample for this evaluation. Defaults to 100.'
                             ),
-                    }),
-                    zod.null(),
-                ])
-                .optional()
-                .describe(
-                    'Optional numeric or categorical passing rule. Null removes the rule; historical results use the current rule.'
-                ),
-        })
-        .optional()
-        .describe('Output settings used to validate the preview, including bounds, categories, and allows_na.'),
-    source: zod
-        .string()
-        .min(1)
-        .describe(
-            'Hog source code to test. Return a boolean, finite number, or category keys matching output_type. Categorical single selection accepts one key or a one-item list; multiple selection accepts a list, including []. Return null only for allowed N\/A. Output settings determine which boolean counts as a failure.'
-        ),
-    sample_count: zod
-        .number()
-        .min(1)
-        .max(evaluationsTestHogCreateBodySampleCountMax)
-        .default(evaluationsTestHogCreateBodySampleCountDefault)
-        .describe('Number of recent $ai_generation events to test against (1–10, default 5).'),
-    allows_na: zod
-        .boolean()
-        .default(evaluationsTestHogCreateBodyAllowsNaDefault)
-        .describe('Whether the evaluation can return N\/A for non-applicable generations.'),
-    conditions: zod
-        .array(zod.record(zod.string(), zod.unknown()))
-        .optional()
-        .describe('Optional trigger conditions to filter which events are sampled.'),
-    target: zod
-        .enum(['generation', 'trace', 'session'])
-        .describe('\* `generation` - Generation\n\* `trace` - Trace\n\* `session` - Session')
-        .default(evaluationsTestHogCreateBodyTargetDefault)
-        .describe(
-            "What the evaluation runs against: 'generation' samples individual generations, 'trace' samples whole traces, and 'session' samples whole sessions that have gone quiet. Each target runs against the same globals it would run against online.\n\n\* `generation` - Generation\n\* `trace` - Trace\n\* `session` - Session"
-        ),
-    target_config: zod
-        .object({
-            window_seconds: zod
-                .number()
-                .min(evaluationsTestHogCreateBodyTargetConfigOneWindowSecondsMin)
-                .max(evaluationsTestHogCreateBodyTargetConfigOneWindowSecondsMax)
-                .default(evaluationsTestHogCreateBodyTargetConfigOneWindowSecondsDefault)
-                .describe('Aggregation window for trace samples, in seconds.'),
-            quiet_period_seconds: zod
-                .number()
-                .min(evaluationsTestHogCreateBodyTargetConfigOneQuietPeriodSecondsMin)
-                .max(evaluationsTestHogCreateBodyTargetConfigOneQuietPeriodSecondsMax)
-                .default(evaluationsTestHogCreateBodyTargetConfigOneQuietPeriodSecondsDefault)
-                .describe(
-                    'For session samples: only sessions with no activity for this long are previewed, matching when a session evaluation would actually run.'
-                ),
-        })
-        .optional()
-        .describe('Target-specific preview settings. For a trace target, set window_seconds between 10 and 7200.'),
-})
+                        properties: zod
+                            .array(zod.record(zod.string(), zod.unknown()))
+                            .optional()
+                            .describe(
+                                'Property filters (event or person) that scope which generations match this condition set.'
+                            ),
+                    })
+                    .describe('A trigger condition set, as on an evaluation. The id is optional here.')
+            )
+            .optional()
+            .describe('Optional trigger conditions to filter which events are sampled.'),
+        target: zod
+            .enum(['generation', 'trace', 'session'])
+            .describe('\* `generation` - Generation\n\* `trace` - Trace\n\* `session` - Session')
+            .default(evaluationsTestHogCreateBodyTargetDefault)
+            .describe(
+                "What the evaluation runs against: 'generation' samples individual generations, 'trace' samples whole traces, and 'session' samples whole sessions that have gone quiet. Each target runs against the same globals it would run against online.\n\n\* `generation` - Generation\n\* `trace` - Trace\n\* `session` - Session"
+            ),
+        target_config: zod
+            .object({
+                strategy: zod
+                    .enum(['fixed_window', 'inactivity'])
+                    .describe('\* `fixed_window` - Fixed window\n\* `inactivity` - Inactivity')
+                    .optional()
+                    .describe(
+                        "The evaluation's settle strategy. A session evaluation with a fixed window is previewed on sessions that have been quiet for `window_seconds`, otherwise for `quiet_period_seconds`.\n\n\* `fixed_window` - Fixed window\n\* `inactivity` - Inactivity"
+                    ),
+                window_seconds: zod
+                    .number()
+                    .min(evaluationsTestHogCreateBodyTargetConfigOneWindowSecondsMin)
+                    .max(evaluationsTestHogCreateBodyTargetConfigOneWindowSecondsMax)
+                    .optional()
+                    .describe('Aggregation window in seconds. A trace preview defaults to 1800 and uses at most 7200.'),
+                quiet_period_seconds: zod
+                    .number()
+                    .min(evaluationsTestHogCreateBodyTargetConfigOneQuietPeriodSecondsMin)
+                    .max(evaluationsTestHogCreateBodyTargetConfigOneQuietPeriodSecondsMax)
+                    .optional()
+                    .describe(
+                        'For session samples: only sessions with no activity for this long are previewed, matching when a session evaluation would actually run. Defaults to 3600.'
+                    ),
+            })
+            .describe("The evaluation's own `target_config` works here, so a client sends it as it is.")
+            .optional()
+            .describe('Target-specific preview settings. For a trace target, set window_seconds between 10 and 7200.'),
+        output_type: zod
+            .enum(['boolean', 'numeric', 'categorical'])
+            .describe('\* `boolean` - Boolean (Pass\/Fail)\n\* `numeric` - Numeric\n\* `categorical` - Categorical')
+            .default(evaluationsTestHogCreateBodyOutputTypeDefault)
+            .describe(
+                'Expected output: boolean, numeric, or categorical. Sentiment is not supported by Hog.\n\n\* `boolean` - Boolean (Pass\/Fail)\n\* `numeric` - Numeric\n\* `categorical` - Categorical'
+            ),
+        output_config: zod
+            .object({
+                allows_na: zod
+                    .boolean()
+                    .optional()
+                    .describe('Whether the evaluation can return N\/A for non-applicable generations.'),
+                true_is_failure: zod
+                    .boolean()
+                    .optional()
+                    .describe(
+                        'Boolean output only. Omit for numeric, categorical, and sentiment output. Whether a true result means the evaluation found a problem. False (the default) suits pass\/fail evaluations, where a true result satisfied the criteria. Set it to true for detector-style evaluations, so a true result is counted and labeled as a fail.'
+                    ),
+                decision_threshold: zod
+                    .number()
+                    .min(evaluationsTestHogCreateBodyOutputConfigDecisionThresholdMin)
+                    .max(evaluationsTestHogCreateBodyOutputConfigDecisionThresholdMax)
+                    .nullish()
+                    .describe(
+                        'Boolean decision-model judges only. Minimum probability of true required for a true result, inclusive. Omit or set null to use 0.5. Applies to new runs; historical results are unchanged.'
+                    ),
+                min: zod
+                    .number()
+                    .nullish()
+                    .describe(
+                        'Inclusive minimum numeric score. Omit for no lower bound. Required for numeric decision models.'
+                    ),
+                max: zod
+                    .number()
+                    .nullish()
+                    .describe(
+                        'Inclusive maximum numeric score. Omit for no upper bound. Required for numeric decision models and must exceed min.'
+                    ),
+                step: zod
+                    .number()
+                    .gt(evaluationsTestHogCreateBodyOutputConfigStepExclusiveMin)
+                    .nullish()
+                    .describe('Optional positive input increment. Does not round evaluation results.'),
+                options: zod
+                    .array(
+                        zod.object({
+                            key: zod
+                                .string()
+                                .min(1)
+                                .max(evaluationsTestHogCreateBodyOutputConfigOptionsItemKeyMax)
+                                .regex(evaluationsTestHogCreateBodyOutputConfigOptionsItemKeyRegExp)
+                                .describe('Stable category key.'),
+                            label: zod
+                                .string()
+                                .min(1)
+                                .max(evaluationsTestHogCreateBodyOutputConfigOptionsItemLabelMax)
+                                .describe('Category display label.'),
+                        })
+                    )
+                    .min(1)
+                    .max(evaluationsTestHogCreateBodyOutputConfigOptionsMax)
+                    .optional()
+                    .describe(
+                        'Categorical output options. Keys identify stored results; labels are displayed to users.'
+                    ),
+                selection_mode: zod
+                    .enum(['single', 'multiple'])
+                    .optional()
+                    .describe(
+                        'Select one category or multiple categories. Multiple selection allows an empty result. Defaults to single.'
+                    ),
+                passing_rule: zod
+                    .union([
+                        zod.object({
+                            operator: zod
+                                .enum(['gte', 'lte'])
+                                .describe('Pass at or above (gte), or at or below (lte), the threshold.'),
+                            threshold: zod
+                                .number()
+                                .describe('Finite passing threshold within any configured score bounds.'),
+                        }),
+                        zod.object({
+                            categories: zod
+                                .array(zod.string())
+                                .describe(
+                                    'Passing category keys. With keys selected, results must be non-empty and contain only these keys. If no passing keys are selected, only an empty result passes.'
+                                ),
+                        }),
+                        zod.null(),
+                    ])
+                    .optional()
+                    .describe(
+                        'Optional numeric or categorical passing rule. Null removes the rule; historical results use the current rule.'
+                    ),
+            })
+            .optional()
+            .describe('Output settings used to validate the preview, including bounds, categories, and allows_na.'),
+        source: zod
+            .string()
+            .min(1)
+            .describe(
+                'Hog source code to test. Return a boolean, finite number, or category keys matching output_type. Categorical single selection accepts one key or a one-item list; multiple selection accepts a list, including []. Return null only for allowed N\/A. Output settings determine which boolean counts as a failure.'
+            ),
+        sample_count: zod
+            .number()
+            .min(1)
+            .max(evaluationsTestHogCreateBodySampleCountMax)
+            .default(evaluationsTestHogCreateBodySampleCountDefault)
+            .describe('Number of recent $ai_generation events to test against (1–10, default 5).'),
+        allows_na: zod
+            .boolean()
+            .default(evaluationsTestHogCreateBodyAllowsNaDefault)
+            .describe('Whether the evaluation can return N\/A for non-applicable generations.'),
+        sample_ids: zod
+            .array(zod.string().max(evaluationsTestHogCreateBodySampleIdsItemMax))
+            .max(evaluationsTestHogCreateBodySampleIdsMax)
+            .optional()
+            .describe(
+                'Test exactly these units instead of sampling: generation event UUIDs, trace IDs, or session IDs, matching `target`. Up to 10, and only units from the last 7 days. Conditions and sampling are ignored for pinned units, and unknown IDs are skipped. A session target tests at most 3 sessions.'
+            ),
+    })
+    .describe("What a preview samples from: the unsaved evaluation's conditions and target.")
 
 /**
  * Team-level clustering configuration (event filters for automated pipelines).
@@ -2870,11 +3000,12 @@ export const llmAnalyticsScoreDefinitionsListQueryTagMatchDefault = `any`
 
 export const LlmAnalyticsScoreDefinitionsListQueryParams = () => zod.object({
     archived: zod.boolean().optional().describe('Filter by archived state.'),
+    created_by: zod.number().optional().describe("Filter by the creator's user ID."),
     kind: zod.string().optional().describe('Filter by scorer kind.'),
     limit: zod.number().optional().describe('Number of results to return per page.'),
     offset: zod.number().optional().describe('The initial index from which to return the results.'),
     order_by: zod.string().optional().describe('Sort by name, kind, created_at, updated_at, or current_version.'),
-    search: zod.string().optional().describe('Search scorers by name or description.'),
+    search: zod.string().optional().describe('Search scorers by name, short name, or description.'),
     tag_match: zod
         .enum(['any', 'all'])
         .default(llmAnalyticsScoreDefinitionsListQueryTagMatchDefault)
@@ -2903,6 +3034,8 @@ export const llmAnalyticsScoreDefinitionsCreateBodyTagsMax = 100
 
 export const llmAnalyticsScoreDefinitionsCreateBodyNameMax = 255
 
+export const llmAnalyticsScoreDefinitionsCreateBodyShortNameMax = 40
+
 export const llmAnalyticsScoreDefinitionsCreateBodyArchivedDefault = false
 export const llmAnalyticsScoreDefinitionsCreateBodyConfigOneOneOptionsItemKeyMax = 128
 
@@ -2917,6 +3050,11 @@ export const LlmAnalyticsScoreDefinitionsCreateBody = () => zod.object({
         .optional()
         .describe('Tag names. Replaces existing tags; send [] to remove all tags. Names are trimmed and lowercased.'),
     name: zod.string().max(llmAnalyticsScoreDefinitionsCreateBodyNameMax).describe('Human-readable scorer name.'),
+    short_name: zod
+        .string()
+        .max(llmAnalyticsScoreDefinitionsCreateBodyShortNameMax)
+        .optional()
+        .describe('Optional compact label. Blank uses the full name.'),
     description: zod.string().nullish().describe('Optional human-readable description.'),
     kind: zod
         .enum(['categorical', 'numeric', 'boolean'])
@@ -3055,6 +3193,8 @@ export const llmAnalyticsScoreDefinitionsPartialUpdateBodyTagsMax = 100
 
 export const llmAnalyticsScoreDefinitionsPartialUpdateBodyNameMax = 255
 
+export const llmAnalyticsScoreDefinitionsPartialUpdateBodyShortNameMax = 40
+
 export const LlmAnalyticsScoreDefinitionsPartialUpdateBody = () => zod.object({
     tags: zod
         .array(zod.string().max(llmAnalyticsScoreDefinitionsPartialUpdateBodyTagsItemMax))
@@ -3066,6 +3206,11 @@ export const LlmAnalyticsScoreDefinitionsPartialUpdateBody = () => zod.object({
         .max(llmAnalyticsScoreDefinitionsPartialUpdateBodyNameMax)
         .optional()
         .describe('Updated scorer name.'),
+    short_name: zod
+        .string()
+        .max(llmAnalyticsScoreDefinitionsPartialUpdateBodyShortNameMax)
+        .optional()
+        .describe('Updated compact label. Blank uses the full name.'),
     description: zod.string().nullish().describe('Updated scorer description.'),
     archived: zod.boolean().optional().describe('Whether the scorer is archived.'),
 })
@@ -3079,6 +3224,8 @@ export const LlmAnalyticsScoreDefinitionsNewVersionCreateParams = () => zod.obje
         ),
 })
 
+export const llmAnalyticsScoreDefinitionsNewVersionCreateBodyShortNameMax = 40
+
 export const llmAnalyticsScoreDefinitionsNewVersionCreateBodyNameMax = 255
 
 export const llmAnalyticsScoreDefinitionsNewVersionCreateBodyConfigOneOneOptionsItemKeyMax = 128
@@ -3088,6 +3235,11 @@ export const llmAnalyticsScoreDefinitionsNewVersionCreateBodyConfigOneOneOptions
 export const llmAnalyticsScoreDefinitionsNewVersionCreateBodyConfigOneOnePassingRuleOneCategoriesItemMax = 128
 
 export const LlmAnalyticsScoreDefinitionsNewVersionCreateBody = () => zod.object({
+    short_name: zod
+        .string()
+        .max(llmAnalyticsScoreDefinitionsNewVersionCreateBodyShortNameMax)
+        .optional()
+        .describe('Updated compact label, saved with this version.'),
     name: zod
         .string()
         .max(llmAnalyticsScoreDefinitionsNewVersionCreateBodyNameMax)

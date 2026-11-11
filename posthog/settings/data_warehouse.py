@@ -33,6 +33,10 @@ USE_LOCAL_SETUP = get_from_env("USE_LOCAL_SETUP", USE_LOCAL_SETUP_DEFAULT, type_
 
 PYARROW_DEBUG_LOGGING = get_from_env("PYARROW_DEBUG_LOGGING", False, type_cast=str_to_bool)
 
+# Keys the one-way hash of masked warehouse columns. Changing it changes every later hash, so every
+# masked table needs a full resync afterwards. Without it, column masking is off outside development.
+WAREHOUSE_COLUMN_MASKING_KEY = os.getenv("WAREHOUSE_COLUMN_MASKING_KEY", "")
+
 # Load the full warehouse source catalog (every vendor SDK) at web-worker startup, before
 # the worker starts serving, so its first warehouse query doesn't pay the multi-second
 # catalog import at request time. WSGI workers load while importing posthog.wsgi, ASGI
@@ -191,6 +195,20 @@ DATA_WAREHOUSE_DELTALITE_MAX_ROW_GROUP_BYTES = get_from_env(
 DATA_WAREHOUSE_DELTALITE_GOVERNOR_ROW_GROUP_SIZING = get_from_env(
     "DATA_WAREHOUSE_DELTALITE_GOVERNOR_ROW_GROUP_SIZING", True, type_cast=str_to_bool
 )
+# Lets a deltalite upsert whose slice-sized plan is narrower than the widest plan borrow idle pod memory,
+# up to DATA_WAREHOUSE_DELTALITE_GOVERNOR_BORROW_MAX_SLICES slices, and run more partition workers and
+# readers. A borrow takes at most half of the free pod memory and never happens while an upsert waits for
+# room. "advisory" logs the borrowed plan and keeps the slice-sized plan. "enforce" runs the borrowed plan,
+# and needs DELTALITE_GOVERNOR_MODE=enforce. "off" computes nothing.
+DATA_WAREHOUSE_DELTALITE_GOVERNOR_BORROW = get_from_env("DATA_WAREHOUSE_DELTALITE_GOVERNOR_BORROW", "advisory")
+DATA_WAREHOUSE_DELTALITE_GOVERNOR_BORROW_MAX_SLICES = get_from_env(
+    "DATA_WAREHOUSE_DELTALITE_GOVERNOR_BORROW_MAX_SLICES", 4.0, type_cast=float
+)
+# deltalite keeps the primary keys of the data files that a merge reads or writes in a per-process cache,
+# so a later merge into the same table decides most files without a read from object storage. The cache
+# size comes from the DELTALITE_PROBE_CACHE_BYTES environment variable (default 128 MiB per process). False makes every merge read each
+# candidate file again, and needs a deltalite build that has the probe cache.
+DATA_WAREHOUSE_DELTALITE_PROBE_CACHE = get_from_env("DATA_WAREHOUSE_DELTALITE_PROBE_CACHE", True, type_cast=str_to_bool)
 # A rebuild run (first sync, reset, full refresh) compacts its own files once a compaction would remove
 # this many, so a long rebuild does not leave one post-load pass that outlasts the stuck-batch timeout.
 DATA_WAREHOUSE_REBUILD_COMPACT_MIN_REMOVABLE_FILES = get_from_env(

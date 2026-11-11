@@ -22,7 +22,7 @@ from products.alerts_platform.backend.facade.api import disable_configurations, 
 from products.alerts_platform.backend.facade.contracts import PlatformAlertUpsert, SourceKind
 from products.alerts_platform.backend.facade.enums import PlatformAlertOwner, PlatformAlertState
 from products.logs.backend.alert_state_machine import AlertState
-from products.logs.backend.models import LogsAlertConfiguration
+from products.logs.backend.models import CONDITION_FIELDS, LogsAlertConfiguration
 from products.logs.backend.platform_source_config import logs_source_config
 
 logger = structlog.get_logger(__name__)
@@ -46,8 +46,6 @@ SETTINGS_FIELDS: Final = (
     "cooldown_minutes",
     "schedule_restriction",
 )
-# The logs alert's columns that make up `source_config["condition"]` on the copy.
-CONDITION_FIELDS: Final = ("threshold_count", "threshold_operator", "window_minutes")
 
 
 def platform_upsert_of(alert: LogsAlertConfiguration) -> PlatformAlertUpsert:
@@ -70,14 +68,17 @@ def platform_upsert_of(alert: LogsAlertConfiguration) -> PlatformAlertUpsert:
         schedule_restriction=alert.schedule_restriction,
         next_check_at=alert.next_check_at,
         snooze_until=alert.snooze_until,
+        created_by_id=alert.created_by_id,
     )
 
 
 # A muted logs alert is a state of its own. On the platform a mute only silences notifications,
-# so the copy keeps checking with the snooze carried on `snooze_until`. Firing states have no entry,
-# because a firing alert stays with logs until it resolves.
+# so the copy keeps checking with the snooze carried on `snooze_until`. A pending resolve is still
+# firing, because its incident stays open until the resolve completes.
 PLATFORM_HANDOVER_STATE: Final[dict[str, PlatformAlertState]] = {
     LogsAlertConfiguration.State.NOT_FIRING: PlatformAlertState.NOT_FIRING,
+    LogsAlertConfiguration.State.FIRING: PlatformAlertState.FIRING,
+    LogsAlertConfiguration.State.PENDING_RESOLVE: PlatformAlertState.FIRING,
     LogsAlertConfiguration.State.SNOOZED: PlatformAlertState.NOT_FIRING,
     LogsAlertConfiguration.State.ERRORED: PlatformAlertState.ERRORED,
     LogsAlertConfiguration.State.BROKEN: PlatformAlertState.BROKEN,

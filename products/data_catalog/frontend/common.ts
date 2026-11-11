@@ -2,6 +2,15 @@ import posthog from 'posthog-js'
 
 import type { Sorting } from '@posthog/lemon-ui'
 
+import { ApiError } from 'lib/api'
+import { slugify } from 'lib/utils/strings'
+
+import type {
+    DataCatalogMetricApi,
+    DataCatalogMetricNameConflictApi,
+    DataCatalogMetricNameConflictExistingApi,
+} from './generated/api.schemas'
+
 export const METRIC_NAME_REGEX = /^[A-Za-z][A-Za-z0-9_]*$/
 
 export const HOGQL_METRIC_DEFINITION_KIND = 'HogQLQuery'
@@ -34,9 +43,18 @@ export function humanizeDefinitionKind(kind: string | null): string {
     return kind
 }
 
+export function sqlNameFromDisplayName(displayName: string): string {
+    const sqlName = slugify(displayName).replace(/-/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '')
+    return /^[0-9]/.test(sqlName) ? `metric_${sqlName}` : sqlName
+}
+
+export function sqlNameAfterDisplayNameChange(displayName: string, sqlName: string, nextDisplayName: string): string {
+    return sqlName === sqlNameFromDisplayName(displayName) ? sqlNameFromDisplayName(nextDisplayName) : sqlName
+}
+
 export function validateMetricName(name: string): string | undefined {
     if (!name) {
-        return 'Name is required'
+        return 'SQL name is required'
     }
     if (!METRIC_NAME_REGEX.test(name)) {
         return 'Use letters, numbers, and underscores, starting with a letter'
@@ -67,6 +85,10 @@ export function reportCatalogTableSorted(table: DataCatalogTable, sorting: Sorti
     })
 }
 
+export function metricDisplayName(metric: Pick<DataCatalogMetricApi, 'name' | 'display_name'>): string {
+    return metric.display_name || metric.name
+}
+
 export function metricCount(count: number): string {
     return `${count} ${count === 1 ? 'metric' : 'metrics'}`
 }
@@ -76,4 +98,13 @@ export function validateMetricDescription(description: string): string | undefin
         return `Keep the description under ${METRIC_DESCRIPTION_MAX_LENGTH} characters. Say what the number is in one or two sentences.`
     }
     return undefined
+}
+
+/** The metric that blocked a create because it holds the same name, or null for any other error. */
+export function existingMetricFromNameConflict(error: unknown): DataCatalogMetricNameConflictExistingApi | null {
+    if (!(error instanceof ApiError) || error.status !== 409 || error.code !== 'metric_name_taken') {
+        return null
+    }
+    const body = error.data as DataCatalogMetricNameConflictApi | undefined
+    return body?.extra?.existing_metric ?? null
 }
